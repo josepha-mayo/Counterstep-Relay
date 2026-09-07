@@ -1,0 +1,39 @@
+name: Verify processed entry thumbnail
+on:
+  push:
+    branches: [master]
+    paths: [.github/workflows/entry-media-check.yml]
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.repository == 'josepha-mayo/Counterstep-Relay'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Fetch and decode the actual public thumbnail
+        run: |
+          python3 -m venv /tmp/media-check
+          /tmp/media-check/bin/pip -q install pillow==11.3.0
+          /tmp/media-check/bin/python - <<'PY'
+          from pathlib import Path
+          import urllib.request, json, hashlib
+          from PIL import Image
+          out=Path('media-check');out.mkdir()
+          url='https://d112y698adiu2z.cloudfront.net/photos/production/software_thumbnail_photos/005/279/176/datas/medium.jpg'
+          with urllib.request.urlopen(url,timeout=30) as r:
+              data=r.read();status=r.status
+          p=out/'thumbnail.jpg';p.write_bytes(data)
+          with Image.open(p) as im:
+              im.load();dim=im.size
+              im.convert('RGB').save(out/'thumbnail-decoded.png')
+          result={'http_status':status,'url':url,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),'dimensions':dim,'decoded':True}
+          (out/'result.json').write_text(json.dumps(result,indent=2))
+          print(json.dumps(result))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: entry-thumbnail-check
+          path: media-check/
+          retention-days: 7
