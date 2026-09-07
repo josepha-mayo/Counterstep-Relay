@@ -46,24 +46,25 @@ jobs:
               data=source.read_bytes(); hashes[name]=hashlib.sha256(data).hexdigest()
               target=root/p
               if target.exists():
-                  assert name=='LICENSE' and target.read_bytes()==data, f'Unexpected existing path: {name}'
+                  # LICENSE has identical words but different line wrapping; preserve the existing file.
+                  assert name=='LICENSE' and target.read_bytes().split()==data.split(), f'Unexpected existing path: {name}'
               else:
                   target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(data)
           assert hashes['vendor/model.json']=='83d562317236464ea09c357522184efe83704746362a6434337b6f570fd64381'
           assert hashes['public/source.zip']=='8cb99d2034b476cd86be5f233d0d7e3c82162790a9505328c156f71d7bb75ced'
           assert hashes['public/demo.mp4']=='383872f4309f6ff5e62505832e6883356c7d73975766a9a31ae444a0a85c959f'
           docs=root/'docs';docs.mkdir(exist_ok=True)
-          (docs/'MIGRATION.json').write_text(json.dumps({'origin_repository':origin,'origin_commit':commit,'imported_at':datetime.now(timezone.utc).isoformat(),'imported_files':hashes,'scope':'Only this dedicated repository is written. The production portfolio is not modified. README and friction notes are updated after byte-preserving import; runtime and model are unchanged.'},indent=2))
+          (docs/'MIGRATION.json').write_text(json.dumps({'origin_repository':origin,'origin_commit':commit,'imported_at':datetime.now(timezone.utc).isoformat(),'origin_file_hashes':hashes,'scope':'Only this dedicated repository is written. Existing MIT text is retained with different line wrapping. README and friction notes are updated; runtime and model are unchanged.'},indent=2))
           readme=root/'README.md';text=readme.read_text()
-          header='[MIT license](LICENSE) | [Working app](https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/) | [2:21 YouTube demo](https://www.youtube.com/watch?v=LDo2FUVooS0)\n\nThis is the dedicated source repository for Counterstep Relay. The earlier isolated portfolio branch is retained only as a historical release and hosting origin. Clone this repository, not the portfolio.\n\n```sh\ngit clone https://github.com/josepha-mayo/Counterstep-Relay.git\ncd Counterstep-Relay\n```\n\n'
+          header='[MIT license](LICENSE) | [Working app](https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/) | [2:21 YouTube demo](https://www.youtube.com/watch?v=LDo2FUVooS0)\n\nThis is the dedicated source repository for Counterstep Relay. The earlier portfolio branch is retained only as a historical release and hosting origin.\n\n```sh\ngit clone https://github.com/josepha-mayo/Counterstep-Relay.git\ncd Counterstep-Relay\n```\n\n'
           text=text.replace('# Counterstep Relay\n\n','# Counterstep Relay\n\n'+header,1)
           text=text.replace('This isolated project branch does not license or modify the surrounding portfolio\'s production code.','This dedicated repository does not license or modify the earlier portfolio\'s production code.')
-          text+='\n## Release provenance\n\n`docs/MIGRATION.json` records every imported source hash and the fixed historical commit. `public/source.zip` is the earlier frozen, publicly verified source archive, not a replacement for this repository\'s current source. The current runtime, tests, model and setup are all present as ordinary files. `evidence/repository-verification.json` records the dedicated-repository checks when completed. Submission status is tracked separately in `ENTRY_STATUS.md`.\n'
+          text+='\n## Release provenance\n\n`docs/MIGRATION.json` records the source hashes and fixed historical commit. `public/source.zip` is the earlier frozen, publicly verified archive, not a replacement for the current repository. Runtime, tests, model and setup are ordinary files here. `evidence/repository-verification.json` records dedicated-repository checks. Submission status is separate in `ENTRY_STATUS.md`.\n'
           readme.write_text(text)
           friction=docs/'FRICTION.md';text=friction.read_text().split('## Unknown account history')[0]
-          text+='## Public deployment link transformation\n\nTask: verify that the anonymously served release matches the tested build. Steps: publish the release, download each public artifact, and compare hashes before exercising the browser. Expected: identical source and hosted bytes. Actual: Netlify rewrote the brand link and the judge-page link in index.html; the strict byte gate failed. Severity: Important for reproducible verification. Workaround: save the exact diff, allow only those two observed transformations, check both rewritten destinations, and keep every script, stylesheet, archive and video check strict. The complete public gate then passed. Suggestion: surface post-processing transformations in deployment metadata or provide a documented byte-preserving mode. This is hosting feedback, not an Alexa SDK fault. See evidence/html-diff.json and evidence/public-verification.json.\n\n## Registration and repository presentation (resolved)\n\nThe entrant confirmed that he does not have an Amazon Developer account. The project uses the self-hosted MCP route, not an Amazon Appstore publication. To remove license-display ambiguity, the source was moved into this dedicated public repository with a full MIT license on its default branch. Neither issue is presented as a defect in Amazon Alexa.\n'
+          text+='## Public deployment link transformation\n\nTask: verify that the anonymous release matches the tested build. Steps: publish, download each artifact, then compare hashes before browser tests. Expected: identical bytes. Actual: Netlify rewrote two HTML links; the strict gate failed. Severity: Important for reproducibility. Workaround: preserve the exact diff, allow only the observed transformations, check both destinations, and retain strict script, stylesheet, archive and video hashes. The complete public gate passed. Suggestion: surface post-processing transformations in deployment metadata or provide a documented byte-preserving mode. This is hosting feedback, not an Alexa SDK fault. See evidence/html-diff.json.\n\n## Registration and repository presentation (resolved)\n\nThe entrant confirmed that he does not have an Amazon Developer account. This is the self-hosted MCP route, not an Appstore publication. A dedicated public repository now holds the complete MIT license on its default branch. Neither issue is an Alexa defect.\n'
           friction.write_text(text)
-          (root/'ENTRY_STATUS.md').write_text('# Counterstep Relay submission status\n\nAmazon hackathon registration 3156049 is complete, solo. Devpost project 1420728, submission 1174536.\n\nThe dedicated repository has been populated with the pinned Relay source and full MIT license. Automated verification is running; final Devpost submission is not yet confirmed. This file will be updated only after the actual submission response is checked.\n\nApp: https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/\nVideo: https://www.youtube.com/watch?v=LDo2FUVooS0\nDevpost: https://devpost.com/software/counterstep-relay-keep-the-work\n\nNo prize or payment is claimed.\n')
+          (root/'ENTRY_STATUS.md').write_text('# Counterstep Relay submission status\n\nAmazon registration 3156049 is complete, solo. Devpost project 1420728, draft submission 1174536.\n\nDedicated source import and verification are in progress. Final submission is not yet confirmed. This file will be updated after the actual submission response is checked.\n\nApp: https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/\nVideo: https://www.youtube.com/watch?v=LDo2FUVooS0\nDevpost: https://devpost.com/software/counterstep-relay-keep-the-work\n\nNo prize or payment is claimed.\n')
           shutil.rmtree(tmp)
           PY
       - name: Install locked dependencies and browser verification tools
@@ -79,7 +80,7 @@ jobs:
           export PATH=/tmp/relay-verify/bin:$PATH
           python - <<'PY'
           from pathlib import Path
-          import json, subprocess, os, time, re, hashlib, shutil
+          import json, subprocess, time, re, hashlib, shutil
           from datetime import datetime,timezone
           e=Path('evidence');e.mkdir(exist_ok=True)
           old=e/'pre-migration';old.mkdir(exist_ok=True)
@@ -96,7 +97,7 @@ jobs:
                       record['node_tests']=int(re.search(r'# tests (\d+)',r.stdout).group(1));assert '# fail 0' in r.stdout
               record['local_browser_workflows']=json.loads((e/'browser.json').read_text())['count']
               record['public_browser_workflows']=json.loads((e/'public-browser.json').read_text())['count']
-              manifest=json.loads(Path('docs/MIGRATION.json').read_text())['imported_files']
+              manifest=json.loads(Path('docs/MIGRATION.json').read_text())['origin_file_hashes']
               runtime=[n for n in manifest if n.startswith(('src/','vendor/','netlify/functions/','tests/','skills/')) or n in ['package.json','package-lock.json','public/index.html','public/app.js','public/style.css','public/demo.mp4']]
               assert all(hashlib.sha256(Path(n).read_bytes()).hexdigest()==manifest[n] for n in runtime)
               record['unchanged_runtime_and_test_files']=len(runtime)
