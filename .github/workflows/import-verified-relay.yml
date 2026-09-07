@@ -1,0 +1,124 @@
+name: Import and verify Counterstep Relay
+on:
+  push:
+    branches: [master]
+    paths: [.github/workflows/import-verified-relay.yml]
+permissions:
+  contents: write
+concurrency:
+  group: relay-dedicated-import
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'josepha-mayo/Counterstep-Relay' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Import only the pinned public Relay project
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess, tempfile, shutil, hashlib, json
+          from datetime import datetime, timezone
+          root=Path.cwd()
+          assert not (root/'src').exists(), 'Import is one-time; source already exists.'
+          origin='https://github.com/josepha-mayo/Joseph-Portfolio.git'
+          commit='2365c81e8fb717e791e9241d245b7c510c044dca'
+          tmp=Path(tempfile.mkdtemp(prefix='relay-source-'))
+          subprocess.run(['git','init','-q',str(tmp)],check=True)
+          subprocess.run(['git','-C',str(tmp),'fetch','--depth=1',origin,commit],check=True,timeout=90)
+          subprocess.run(['git','-C',str(tmp),'checkout','--detach','FETCH_HEAD'],check=True)
+          assert subprocess.check_output(['git','-C',str(tmp),'rev-parse','HEAD'],text=True).strip()==commit
+          paths=subprocess.check_output(['git','-C',str(tmp),'ls-tree','-r','--name-only','HEAD'],text=True).splitlines()
+          hashes={}
+          for name in paths:
+              p=Path(name)
+              assert not p.is_absolute() and '..' not in p.parts
+              if p.parts[0]=='.github' or name=='ENTRY_STATUS.md': continue
+              source=tmp/p
+              assert source.is_file() and not source.is_symlink()
+              data=source.read_bytes(); hashes[name]=hashlib.sha256(data).hexdigest()
+              target=root/p
+              if target.exists():
+                  assert name=='LICENSE' and target.read_bytes()==data, f'Unexpected existing path: {name}'
+              else:
+                  target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(data)
+          assert hashes['vendor/model.json']=='83d562317236464ea09c357522184efe83704746362a6434337b6f570fd64381'
+          assert hashes['public/source.zip']=='8cb99d2034b476cd86be5f233d0d7e3c82162790a9505328c156f71d7bb75ced'
+          assert hashes['public/demo.mp4']=='383872f4309f6ff5e62505832e6883356c7d73975766a9a31ae444a0a85c959f'
+          docs=root/'docs';docs.mkdir(exist_ok=True)
+          (docs/'MIGRATION.json').write_text(json.dumps({'origin_repository':origin,'origin_commit':commit,'imported_at':datetime.now(timezone.utc).isoformat(),'imported_files':hashes,'scope':'Only this dedicated repository is written. The production portfolio is not modified. README and friction notes are updated after byte-preserving import; runtime and model are unchanged.'},indent=2))
+          readme=root/'README.md';text=readme.read_text()
+          header='[MIT license](LICENSE) | [Working app](https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/) | [2:21 YouTube demo](https://www.youtube.com/watch?v=LDo2FUVooS0)\n\nThis is the dedicated source repository for Counterstep Relay. The earlier isolated portfolio branch is retained only as a historical release and hosting origin. Clone this repository, not the portfolio.\n\n```sh\ngit clone https://github.com/josepha-mayo/Counterstep-Relay.git\ncd Counterstep-Relay\n```\n\n'
+          text=text.replace('# Counterstep Relay\n\n','# Counterstep Relay\n\n'+header,1)
+          text=text.replace('This isolated project branch does not license or modify the surrounding portfolio\'s production code.','This dedicated repository does not license or modify the earlier portfolio\'s production code.')
+          text+='\n## Release provenance\n\n`docs/MIGRATION.json` records every imported source hash and the fixed historical commit. `public/source.zip` is the earlier frozen, publicly verified source archive, not a replacement for this repository\'s current source. The current runtime, tests, model and setup are all present as ordinary files. `evidence/repository-verification.json` records the dedicated-repository checks when completed. Submission status is tracked separately in `ENTRY_STATUS.md`.\n'
+          readme.write_text(text)
+          friction=docs/'FRICTION.md';text=friction.read_text().split('## Unknown account history')[0]
+          text+='## Public deployment link transformation\n\nTask: verify that the anonymously served release matches the tested build. Steps: publish the release, download each public artifact, and compare hashes before exercising the browser. Expected: identical source and hosted bytes. Actual: Netlify rewrote the brand link and the judge-page link in index.html; the strict byte gate failed. Severity: Important for reproducible verification. Workaround: save the exact diff, allow only those two observed transformations, check both rewritten destinations, and keep every script, stylesheet, archive and video check strict. The complete public gate then passed. Suggestion: surface post-processing transformations in deployment metadata or provide a documented byte-preserving mode. This is hosting feedback, not an Alexa SDK fault. See evidence/html-diff.json and evidence/public-verification.json.\n\n## Registration and repository presentation (resolved)\n\nThe entrant confirmed that he does not have an Amazon Developer account. The project uses the self-hosted MCP route, not an Amazon Appstore publication. To remove license-display ambiguity, the source was moved into this dedicated public repository with a full MIT license on its default branch. Neither issue is presented as a defect in Amazon Alexa.\n'
+          friction.write_text(text)
+          (root/'ENTRY_STATUS.md').write_text('# Counterstep Relay submission status\n\nAmazon hackathon registration 3156049 is complete, solo. Devpost project 1420728, submission 1174536.\n\nThe dedicated repository has been populated with the pinned Relay source and full MIT license. Automated verification is running; final Devpost submission is not yet confirmed. This file will be updated only after the actual submission response is checked.\n\nApp: https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/\nVideo: https://www.youtube.com/watch?v=LDo2FUVooS0\nDevpost: https://devpost.com/software/counterstep-relay-keep-the-work\n\nNo prize or payment is claimed.\n')
+          shutil.rmtree(tmp)
+          PY
+      - name: Install locked dependencies and browser verification tools
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          python3 -m venv /tmp/relay-verify
+          /tmp/relay-verify/bin/pip -q install playwright==1.55.0
+          /tmp/relay-verify/bin/python -m playwright install --with-deps chromium
+      - name: Execute actual repository and public deployment checks
+        run: |
+          export PATH=/tmp/relay-verify/bin:$PATH
+          python - <<'PY'
+          from pathlib import Path
+          import json, subprocess, os, time, re, hashlib, shutil
+          from datetime import datetime,timezone
+          e=Path('evidence');e.mkdir(exist_ok=True)
+          old=e/'pre-migration';old.mkdir(exist_ok=True)
+          for p in list(e.iterdir()):
+              if p.is_file():shutil.copy2(p,old/p.name)
+          record={'status':'running','repository':'josepha-mayo/Counterstep-Relay','checkout_commit':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),'origin_commit':'2365c81e8fb717e791e9241d245b7c510c044dca','started_at':datetime.now(timezone.utc).isoformat(),'commands':[],'scope':'Internal tests with synthetic equations; not a learner study or live Alexa certification.'}
+          try:
+              for name,cmd in [('build',['npm','run','build']),('node-tests',['npm','test']),('browser',['python','tests/browser.py']),('public-check',['python','tools/public_check.py'])]:
+                  t=time.monotonic();r=subprocess.run(cmd,capture_output=True,text=True,timeout=300)
+                  (e/('repository-'+name+'.log')).write_text(r.stdout+'\n'+r.stderr)
+                  record['commands'].append({'name':name,'exit_code':r.returncode,'seconds':round(time.monotonic()-t,3)})
+                  assert r.returncode==0,(name,r.stdout[-2000:],r.stderr[-2000:])
+                  if name=='node-tests':
+                      record['node_tests']=int(re.search(r'# tests (\d+)',r.stdout).group(1));assert '# fail 0' in r.stdout
+              record['local_browser_workflows']=json.loads((e/'browser.json').read_text())['count']
+              record['public_browser_workflows']=json.loads((e/'public-browser.json').read_text())['count']
+              manifest=json.loads(Path('docs/MIGRATION.json').read_text())['imported_files']
+              runtime=[n for n in manifest if n.startswith(('src/','vendor/','netlify/functions/','tests/','skills/')) or n in ['package.json','package-lock.json','public/index.html','public/app.js','public/style.css','public/demo.mp4']]
+              assert all(hashlib.sha256(Path(n).read_bytes()).hexdigest()==manifest[n] for n in runtime)
+              record['unchanged_runtime_and_test_files']=len(runtime)
+              record['status']='passed'
+          except BaseException as ex:
+              record.update(status='failed',error=str(ex));raise
+          finally:
+              record['finished_at']=datetime.now(timezone.utc).isoformat();(e/'repository-verification.json').write_text(json.dumps(record,indent=2))
+          print(json.dumps(record))
+          PY
+      - name: Publish verified source to this repository only
+        run: |
+          git config user.name 'Counterstep Relay Build'
+          git config user.email 'counterstep-relay-build@users.noreply.github.com'
+          git add -A
+          git commit -m 'Publish pinned Relay implementation, model, tests and verified demo'
+          git push origin HEAD:master
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relay-dedicated-verification
+          path: |
+            evidence/
+            docs/MIGRATION.json
+          retention-days: 14
