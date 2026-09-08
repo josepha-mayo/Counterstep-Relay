@@ -89,3 +89,8 @@ Original work: MIT. Official MCP SDK: MIT. Zod: MIT. Development-only Playwright
 ## Release provenance
 
 `docs/MIGRATION.json` records the source hashes and fixed historical commit. `public/source.zip` is the earlier frozen, publicly verified archive, not a replacement for the current repository. Runtime, tests, model and setup are ordinary files here. `evidence/repository-verification.json` records dedicated-repository checks. Submission status is separate in `ENTRY_STATUS.md`.
+
+
+## Repair Desk update
+
+See [the Repair Desk notes](docs/REPAIR_DESK.md) for the guided line-editing and readable study-note workflow. The exact engine, learned weights, four MCP tools and protocol are unchanged. The updated host is still explicit-command driven, not a conversational language-model agent. Release and public-origin results are recorded separately under evidence/.

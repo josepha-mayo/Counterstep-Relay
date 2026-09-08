@@ -1,0 +1,27 @@
+{
+  "status": "passed",
+  "started_at": "2026-09-08T17:20:38.663061+00:00",
+  "commands": [
+    {
+      "name": "desk-build",
+      "exit_code": 0
+    },
+    {
+      "name": "desk-all-node",
+      "exit_code": 0
+    },
+    {
+      "name": "desk-inherited-browser",
+      "exit_code": 0
+    },
+    {
+      "name": "desk-new-browser",
+      "exit_code": 0
+    }
+  ],
+  "scope": "Internal functional tests with synthetic equations. No learner study, model-driven host, or live Alexa certification.",
+  "node_tests": 97,
+  "inherited_browser_workflows": 25,
+  "new_browser_workflows": 18,
+  "finished_at": "2026-09-08T17:20:50.381264+00:00"
+}

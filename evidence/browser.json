@@ -1,6 +1,6 @@
 {
   "status": "passed",
-  "origin": "http://127.0.0.1:37853",
+  "origin": "http://127.0.0.1:40411",
   "authentication": "none",
   "tool_mocks": false,
   "count": 25,
@@ -35,71 +35,75 @@
   "errors": [],
   "requests": [
     {
-      "url": "http://127.0.0.1:37853/",
+      "url": "http://127.0.0.1:40411/",
       "method": "GET"
     },
     {
-      "url": "http://127.0.0.1:37853/style.css",
+      "url": "http://127.0.0.1:40411/style.css",
       "method": "GET"
     },
     {
-      "url": "http://127.0.0.1:37853/app.js",
+      "url": "http://127.0.0.1:40411/app.js",
       "method": "GET"
     },
     {
-      "url": "http://127.0.0.1:37853/mcp",
+      "url": "http://127.0.0.1:40411/repair-desk.mjs",
+      "method": "GET"
+    },
+    {
+      "url": "http://127.0.0.1:40411/mcp",
       "method": "POST"
     },
     {
-      "url": "http://127.0.0.1:37853/mcp",
+      "url": "http://127.0.0.1:40411/mcp",
       "method": "POST"
     },
     {
-      "url": "http://127.0.0.1:37853/mcp",
+      "url": "http://127.0.0.1:40411/mcp",
       "method": "POST"
     },
     {
-      "url": "http://127.0.0.1:37853/mcp",
+      "url": "http://127.0.0.1:40411/mcp",
       "method": "POST"
     },
     {
-      "url": "http://127.0.0.1:37853/mcp",
+      "url": "http://127.0.0.1:40411/mcp",
       "method": "POST"
     },
     {
-      "url": "http://127.0.0.1:37853/mcp",
+      "url": "http://127.0.0.1:40411/mcp",
       "method": "POST"
     },
     {
-      "url": "http://127.0.0.1:37853/mcp",
+      "url": "http://127.0.0.1:40411/mcp",
       "method": "POST"
     },
     {
-      "url": "http://127.0.0.1:37853/mcp",
+      "url": "http://127.0.0.1:40411/mcp",
       "method": "POST"
     },
     {
-      "url": "http://127.0.0.1:37853/mcp",
+      "url": "http://127.0.0.1:40411/mcp",
       "method": "POST"
     },
     {
-      "url": "http://127.0.0.1:37853/mcp",
+      "url": "http://127.0.0.1:40411/mcp",
       "method": "POST"
     },
     {
-      "url": "http://127.0.0.1:37853/mcp",
+      "url": "http://127.0.0.1:40411/mcp",
       "method": "POST"
     },
     {
-      "url": "http://127.0.0.1:37853/mcp",
+      "url": "http://127.0.0.1:40411/mcp",
       "method": "POST"
     },
     {
-      "url": "http://127.0.0.1:37853/mcp",
+      "url": "http://127.0.0.1:40411/mcp",
       "method": "POST"
     },
     {
-      "url": "http://127.0.0.1:37853/mcp",
+      "url": "http://127.0.0.1:40411/mcp",
       "method": "POST"
     }
   ]

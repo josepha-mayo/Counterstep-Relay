@@ -1,0 +1,22 @@
+{
+  "index.html": {
+    "sha256": "0d6e04e2149e8c6acd8c8244458ac45945aee903d21d1596992bcb09bfde113c",
+    "bytes": 5022
+  },
+  "app.js": {
+    "sha256": "a2e1ac999995ef48644d37f972b18e82a8ec4cb91f5297c42c96880cf4971f7a",
+    "bytes": 8988
+  },
+  "style.css": {
+    "sha256": "1a031fec4456b9693898f5e4b45146269e45da4a5c17a3aade5474472ca8e112",
+    "bytes": 5874
+  },
+  "repair-desk.mjs": {
+    "sha256": "76e8486dd6e7503a728975ee612736528816efa4b495c4b6a0a6fde76c3181b2",
+    "bytes": 8783
+  },
+  "desk-source.zip": {
+    "sha256": "cff24a9caeb61d468e89e9075bda6600197a85b686afdf10a747be29282d7c5e",
+    "bytes": 2864438
+  }
+}
