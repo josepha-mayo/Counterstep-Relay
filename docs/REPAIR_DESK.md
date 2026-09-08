@@ -1,6 +1,6 @@
 # Repair Desk: keep the learner in the loop
 
-A host upgrade to the existing Counterstep Relay project. Original work, MIT licensed, with substantial AI assistance. The exact checker, learned ranker, MCP SDK and replay rules are unchanged.
+A host upgrade to the existing Counterstep Relay project. Original work, MIT licensed, with substantial AI assistance. The exact evaluator, learned ranker, MCP SDK and replay/scoring rules are unchanged. Only report metadata is extended server-side to reconstruct each practice question and instruction from the stored family and seed.
 
 ## What a learner can now do
 
@@ -8,7 +8,7 @@ Fix the first faulty line without retyping the whole solution. The original prob
 
 The next-step guide responds to the checked state: repair, unsupported expression, unfinished work, fresh-number practice, or an exported study note. It does not supply a correct equation or reveal a counterexample automatically. Existing explicit hint and reveal controls remain.
 
-The readable Markdown study note comes from `repair_report`, which replays the supplied session. It lists the actual work, recorded attempts, and separate independent, assisted and revised completions. A repair is not counted as a new independent practice answer. A Markdown note is not an importable session; save the handoff JSON to resume.
+The readable Markdown study note comes from `repair_report`, which replays the supplied session. It previews and exports the actual work, the original question and requested operation for each recorded attempt, and separate independent, assisted and revised completions. A repair is not counted as a new independent practice answer. A Markdown note is not an importable session; save the handoff JSON to resume.
 
 ## Useful evidence, not inflated promises
 
@@ -23,3 +23,7 @@ This is still an explicit-command Alexa+ experience simulator calling a real sel
 Imported fingerprints identify bytes, not authorship or a certified grade. Anyone controlling a session can construct another internally valid history. Every supported equation transition is checked, but unwritten reasoning and understanding are not inferred.
 
 Keep the submitted original immutable until this candidate passes release and public-origin gates. Do not merge a portfolio preview branch into the unrelated portfolio production branch. The dedicated Counterstep-Relay repository is the source of record.
+
+## Report-context refinement
+
+Source review found that an answer-only note makes a tutor reconstruct what was asked. The report now includes the replay-derived question and instruction, without adding an answer key. The same note is previewed and downloaded; changing the session or editing unreviewed work hides the old preview. Question context is generated from the original family/seed, never trusted from imported grade fields.

@@ -1,3 +1,34 @@
+# Repair Desk release, 8 September 2026
+
+Fix one faulty line without retyping the whole chain. Check fresh-number practice, reopen its handoff, and share a readable study note with the original practice questions and your actual answers.
+
+The host still uses explicit commands and the real MCP service. It is not a live Alexa integration or a free-form language-model tutor. The exact evaluator, learned weights and event-scoring rules are unchanged. The server report now reconstructs each question from the recorded practice family and seed. No expected answer is added to the report.
+
+The current release uses `public/desk-source.zip` (also served as `source.zip`), `public/demo.mp4`, and the `desk-` evidence records. Earlier release/test records below remain historical; they are not added together as new results.
+
+## Quick start
+
+```sh
+git clone --branch relay-desk-final-20260908 --single-branch https://github.com/josepha-mayo/Counterstep-Relay.git
+cd Counterstep-Relay
+npm ci
+npm test
+npm run build
+npm start
+```
+
+Open the local URL printed by the server. To resume, use the saved handoff JSON, not the Markdown note.
+
+## What to demonstrate
+
+Start with the two-canceling-errors example, repair only line two, try a new practice card, request help on another, save and reopen, then export the study note. A later action or changed work hides a stale preview. Both exports are user-initiated; nothing is automatically sent to a tutor.
+
+No learning gain, field study, authenticated authorship or school grade is established by the internal examples.
+
+---
+
+## Original release documentation
+
 # Counterstep Relay
 
 [MIT license](LICENSE) | [Working app](https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/) | [2:21 YouTube demo](https://www.youtube.com/watch?v=LDo2FUVooS0)

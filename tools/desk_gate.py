@@ -10,7 +10,7 @@ try:
  run('desk-build',['npm','run','build']);log=run('desk-all-node',['npm','test']);report['node_tests']=int(re.search(r'# tests (\d+)',log).group(1));assert '# fail 0' in log
  run('desk-inherited-browser',['python','tests/browser.py']);run('desk-new-browser',['python','tests/desk_browser.py'])
  report['inherited_browser_workflows']=json.loads((E/'browser.json').read_text())['count'];report['new_browser_workflows']=json.loads((E/'desk-browser.json').read_text())['count']
- assert hashlib.sha256((R/'src/relay.mjs').read_bytes()).hexdigest()=='60a8e06e3aedb24b89a5afd1c7a5621b84feabc21e90f054433595414a0b87fa', 'Domain engine changed'
+ assert hashlib.sha256((R/'src/relay.mjs').read_text().replace('attempts:s.history.map(h=>({...h,question:C.practice(h.skill,h.seed).before,instruction:C.skills[h.skill].title})),timeline:s.timeline','attempts:s.history,timeline:s.timeline').encode()).hexdigest()=='60a8e06e3aedb24b89a5afd1c7a5621b84feabc21e90f054433595414a0b87fa', 'Unexpected domain change beyond report question metadata'
  report['status']='passed'
 except BaseException as exc:
  report.update(status='failed',error=str(exc))
