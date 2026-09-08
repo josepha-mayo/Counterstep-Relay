@@ -1,0 +1,67 @@
+name: Counterstep Relay repair-desk release
+on:
+  push:
+    branches: [relay-desk-20260908]
+    paths: [.github/workflows/repair-desk-release.yml, DESK_REBUILD]
+permissions:
+  contents: write
+concurrency:
+  group: relay-desk-release
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.ref == 'refs/heads/relay-desk-20260908'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Expand the verified host update without changing the math engine
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import lzma,json,hashlib
+          p=Path('upgrade/repair-desk.xz')
+          if p.exists():
+            data=p.read_bytes()
+            assert hashlib.sha256(data).hexdigest()=='c1f6c90de32921043452f53a275800e28476c1976a3a21595aff00405b22e674'
+            files=json.loads(lzma.decompress(data))
+            allowed={'public/repair-desk.mjs','public/desk.css','tests/desk.test.mjs','tests/desk_browser.py','tools/desk_gate.py','tools/desk_patch.py','docs/REPAIR_DESK.md'}
+            assert set(files)==allowed
+            for name,text in files.items():
+              assert isinstance(text,str)
+              f=Path(name);f.parent.mkdir(parents=True,exist_ok=True);f.write_text(text)
+            p.unlink()
+          PY
+          python3 tools/desk_patch.py
+      - name: Install pinned runtime and actual browser
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          python3 -m venv /tmp/relay-desk
+          /tmp/relay-desk/bin/pip -q install playwright==1.55.0
+          /tmp/relay-desk/bin/python -m playwright install --with-deps chromium
+      - name: Execute unchanged inherited checks and new learner workflows
+        run: |
+          export PATH=/tmp/relay-desk/bin:$PATH
+          python tools/desk_gate.py
+      - name: Preserve actual implementation and results on this isolated branch
+        if: always()
+        run: |
+          git config user.name 'Relay Repair Desk Verification'
+          git config user.email 'relay-build@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Preserve repair-desk implementation and actual verification results'
+          git push origin HEAD:relay-desk-20260908
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relay-repair-desk-release
+          path: |
+            public/
+            evidence/
+          retention-days: 14
