@@ -1,0 +1,82 @@
+name: Relay Repair Desk complete release
+on:
+  push:
+    branches: [relay-desk-final-20260908]
+    paths: [.github/workflows/desk-final-release.yml, DESK_FINAL_REBUILD]
+permissions:
+  contents: write
+concurrency:
+  group: relay-desk-complete-release
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.ref == 'refs/heads/relay-desk-final-20260908'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      HF_HUB_DISABLE_TELEMETRY: '1'
+      DO_NOT_TRACK: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Expand the audited release refinement
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import lzma,json,hashlib
+          parts=[Path(f'upgrade/desk-final-{i}.bin') for i in range(3)]
+          if parts[0].exists():
+            assert all(p.exists() for p in parts)
+            data=b''.join(p.read_bytes() for p in parts)
+            assert hashlib.sha256(data).hexdigest()=='9dca474ef09a5c07d7dacbcf8ae980fb707c3fc2f69666866940042c6155f4d7'
+            for name,text in json.loads(lzma.decompress(data)).items():
+              f=Path(name)
+              assert not f.is_absolute() and '..' not in f.parts and f.parts[0]!='.github' and isinstance(text,str)
+              f.parent.mkdir(parents=True,exist_ok=True);f.write_text(text)
+            for p in parts:p.unlink()
+          p=Path('README.md')
+          p.write_text(p.read_text().replace('git clone --branch relay-desk-20260908','git clone --branch relay-desk-final-20260908'))
+          PY
+      - name: Install locked runtime and actual browser
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          python3 -m venv /tmp/relay-desk-final
+          /tmp/relay-desk-final/bin/pip -q install playwright==1.55.0
+          /tmp/relay-desk-final/bin/python -m playwright install --with-deps chromium
+      - name: Run inherited and new workflows before recording
+        run: |
+          export PATH=/tmp/relay-desk-final/bin:$PATH
+          python tools/desk_gate.py
+          python tests/report_context_browser.py
+      - name: Install stock synthetic narration and media tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends espeak-ng ffmpeg
+          /tmp/relay-desk-final/bin/pip -q install torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
+          /tmp/relay-desk-final/bin/pip -q install kokoro==0.9.4 soundfile==0.13.1
+      - name: Record actual task and package verified source
+        run: |
+          export PATH=/tmp/relay-desk-final/bin:$PATH
+          python tools/desk_demo.py
+          python tools/desk_package.py
+      - name: Preserve source and actual execution results only on the candidate branch
+        if: always()
+        run: |
+          git config user.name 'Relay Release Verification'
+          git config user.email 'relay-build@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Preserve question-aware study notes, actual checks and recorded repair workflow'
+          git push origin HEAD:relay-desk-final-20260908
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: relay-desk-final-release
+          path: |
+            public/
+            evidence/
+          retention-days: 14
