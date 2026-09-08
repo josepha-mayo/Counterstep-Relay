@@ -1,6 +1,6 @@
 {
   "status": "passed",
-  "origin": "https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app",
+  "origin": "https://6aa04fdf8253920008025c4b--josephm.netlify.app",
   "authentication": "none",
   "tool_mocks": false,
   "count": 25,
@@ -35,71 +35,75 @@
   "errors": [],
   "requests": [
     {
-      "url": "https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/",
+      "url": "https://6aa04fdf8253920008025c4b--josephm.netlify.app/",
       "method": "GET"
     },
     {
-      "url": "https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/style.css",
+      "url": "https://6aa04fdf8253920008025c4b--josephm.netlify.app/style.css",
       "method": "GET"
     },
     {
-      "url": "https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/app.js",
+      "url": "https://6aa04fdf8253920008025c4b--josephm.netlify.app/app.js",
       "method": "GET"
     },
     {
-      "url": "https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/mcp",
+      "url": "https://6aa04fdf8253920008025c4b--josephm.netlify.app/repair-desk.mjs",
+      "method": "GET"
+    },
+    {
+      "url": "https://6aa04fdf8253920008025c4b--josephm.netlify.app/mcp",
       "method": "POST"
     },
     {
-      "url": "https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/mcp",
+      "url": "https://6aa04fdf8253920008025c4b--josephm.netlify.app/mcp",
       "method": "POST"
     },
     {
-      "url": "https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/mcp",
+      "url": "https://6aa04fdf8253920008025c4b--josephm.netlify.app/mcp",
       "method": "POST"
     },
     {
-      "url": "https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/mcp",
+      "url": "https://6aa04fdf8253920008025c4b--josephm.netlify.app/mcp",
       "method": "POST"
     },
     {
-      "url": "https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/mcp",
+      "url": "https://6aa04fdf8253920008025c4b--josephm.netlify.app/mcp",
       "method": "POST"
     },
     {
-      "url": "https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/mcp",
+      "url": "https://6aa04fdf8253920008025c4b--josephm.netlify.app/mcp",
       "method": "POST"
     },
     {
-      "url": "https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/mcp",
+      "url": "https://6aa04fdf8253920008025c4b--josephm.netlify.app/mcp",
       "method": "POST"
     },
     {
-      "url": "https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/mcp",
+      "url": "https://6aa04fdf8253920008025c4b--josephm.netlify.app/mcp",
       "method": "POST"
     },
     {
-      "url": "https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/mcp",
+      "url": "https://6aa04fdf8253920008025c4b--josephm.netlify.app/mcp",
       "method": "POST"
     },
     {
-      "url": "https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/mcp",
+      "url": "https://6aa04fdf8253920008025c4b--josephm.netlify.app/mcp",
       "method": "POST"
     },
     {
-      "url": "https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/mcp",
+      "url": "https://6aa04fdf8253920008025c4b--josephm.netlify.app/mcp",
       "method": "POST"
     },
     {
-      "url": "https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/mcp",
+      "url": "https://6aa04fdf8253920008025c4b--josephm.netlify.app/mcp",
       "method": "POST"
     },
     {
-      "url": "https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/mcp",
+      "url": "https://6aa04fdf8253920008025c4b--josephm.netlify.app/mcp",
       "method": "POST"
     },
     {
-      "url": "https://6a9f1cbbfc65ef0008fc1060--josephm.netlify.app/mcp",
+      "url": "https://6aa04fdf8253920008025c4b--josephm.netlify.app/mcp",
       "method": "POST"
     }
   ]

@@ -1,0 +1,105 @@
+{
+  "status": "passed",
+  "origin": "https://6aa04fdf8253920008025c4b--josephm.netlify.app",
+  "authentication": "none",
+  "started_at": "2026-09-08T18:14:13.911676+00:00",
+  "files": [
+    {
+      "name": "index.html",
+      "bytes": 5009,
+      "sha256": "6be13cffa965d2bf4a157bc17f7414ff49c6aec2ae3453476649c9acdc5e4d82",
+      "byte_identical": false
+    },
+    {
+      "name": "app.js",
+      "bytes": 8988,
+      "sha256": "a2e1ac999995ef48644d37f972b18e82a8ec4cb91f5297c42c96880cf4971f7a",
+      "byte_identical": true
+    },
+    {
+      "name": "style.css",
+      "bytes": 6207,
+      "sha256": "ea058f9d0cf57fa794d65f16796eb2b5e3ba42047309edd60df80d3c15fd0d83",
+      "byte_identical": true
+    },
+    {
+      "name": "repair-desk.mjs",
+      "bytes": 9789,
+      "sha256": "f638b441bbde05608bc70b12fae47801366b167a619c4746c053408ef93b1e54",
+      "byte_identical": true
+    },
+    {
+      "name": "judge.html",
+      "bytes": 1073,
+      "sha256": "0d175720761ea953ce6091fa132072c05d4c19fb4ce9870ba9d484728ca4a030",
+      "byte_identical": false
+    },
+    {
+      "name": "README.md",
+      "bytes": 10143,
+      "sha256": "76d0cb73a4a2c3db5cd3e980a9053c2f51931bd2ab492afcc11d312235269a21",
+      "byte_identical": true
+    },
+    {
+      "name": "LICENSE",
+      "bytes": 1070,
+      "sha256": "b0b87bf209abf9b534fe0c219c2c52adf7923080bde5d05deb4d218e224af399",
+      "byte_identical": true
+    },
+    {
+      "name": "SKILL.md",
+      "bytes": 2392,
+      "sha256": "e5a1fdf8cd8c891293fd287d4f662ac452866513937e6274d44b9ce09ab54f18",
+      "byte_identical": true
+    },
+    {
+      "name": "demo.mp4",
+      "bytes": 3890136,
+      "sha256": "f0a07a08de1da4c7d06e12c358129ff693bd73cf2fbc1b43cece9af3c55fd3a8",
+      "byte_identical": true
+    },
+    {
+      "name": "demo-transcript.md",
+      "bytes": 1840,
+      "sha256": "6613c37d74f4699eac5c63004c85464b566eec80b257ec1a050a40105a835f85",
+      "byte_identical": true
+    },
+    {
+      "name": "desk-source.zip",
+      "bytes": 4005981,
+      "sha256": "404d52dcc07a2f8bb9d281685efce859fad52168079ccd538e4f0f316cc4a39f",
+      "byte_identical": true
+    },
+    {
+      "name": "source.zip",
+      "bytes": 4005981,
+      "sha256": "404d52dcc07a2f8bb9d281685efce859fad52168079ccd538e4f0f316cc4a39f",
+      "byte_identical": true
+    },
+    {
+      "name": "evidence/desk-publish.json",
+      "bytes": 656,
+      "sha256": "746b15298a4f40af6711a4ce3d26269f25ddac5f07d70a88f185e4399e359c73",
+      "byte_identical": true
+    },
+    {
+      "name": "evidence/desk-demo.json",
+      "bytes": 2950,
+      "sha256": "988590f189673993e57c97f3493ea0252a3c5c585fee738a676bb76253521e1e",
+      "byte_identical": true
+    }
+  ],
+  "content_security_policy": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'",
+  "browser_workflows": 50,
+  "browser_breakdown": {
+    "inherited": 25,
+    "repair_desk": 18,
+    "report_context": 7
+  },
+  "demo_seconds": 129.35,
+  "audio_rms": 0.1367539812639372,
+  "source_archive": "Selected runtime and test files match current source exactly",
+  "html_rewrites": "Only known index/judge anchor URL and quote rewrites accepted",
+  "scope": "Actual deployed MCP with synthetic equations. Not an independent educational study, security certification or live Alexa deployment.",
+  "finished_at": "2026-09-08T18:14:52.649614+00:00"
+}
