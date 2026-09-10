@@ -1,29 +1,28 @@
-# Counterstep Pocket: native Android prototype
+# Counterstep Pocket 0.3 preview
 
-A separate native-mobile implementation of the Counterstep repair-to-practice idea. It does not replace the existing Amazon or Prom entries. The current slice is deliberately focused: expand an integer multiple of (x + an integer), check it, retain the first response and hint history, persist a draft, reopen and share a practice note.
+A separate native Android repair-to-practice app. It does not replace the Amazon Counterstep Relay or Prom entry. The integer-linear checker supports a narrow expansion task, not general algebra, OCR or a conversational model.
 
-Core practice and hints are free and work offline. The optional mixed-sign pack has an actual pinned RevenueCat Android SDK adapter for Test Store offerings, purchase and restore callbacks. Public Test Store keys are entered only after the operator accepts the SDK connection. No key is shipped, no provider success is fabricated, and local study files cannot grant an entitlement. The SDK's active mixed_signs entitlement is the only in-process unlock source. This prototype is not configured for real charges or store publication.
+## This revision
 
-## Build
+Term-specific feedback distinguishes an incorrect coefficient from an incorrect constant. Changing a draft immediately invalidates the displayed result while retaining every previous attempt and hint. An older solved attempt cannot discard an unfinished edited draft. Keyboard focus is released on check/hint and feedback is revealed without hiding later controls.
 
-JDK 17, Android SDK 35, Gradle 8.13:
+The optional RevenueCat Test Store path uses process-local connection, refreshed access before a pack task, independent restoration, named package selection, local expiry/timeouts and stale-callback rejection. Local waiting-state cancellation does not cancel provider transactions. Free practice and hints require no store. No key is included, no SDK purchase result is invented, and release builds disable this test-only setup. Never publish a Test Store-configured APK to an app store.
+
+## Build and inspect
+
+JDK 17, Android SDK 35 and Gradle 8.13. From `pocket/`:
 
 ```
-gradle :app:testDebugUnitTest :app:assembleDebug
+gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest
+gradle --no-daemon :app:connectedDebugAndroidTest
 ```
 
-The isolated GitHub workflow produces the debug APK and test XML. Open this directory as an Android Studio project. The included exercise checker is new Kotlin code scoped to expanded integer-linear terms, not a full port of the earlier algebra/model stack. No conversational model or photo OCR is claimed.
+The existing isolated device workflow records real Gradle results, Android 15 emulator tests, screenshots and process-stop/reopen evidence. Treat its artifact verification.json as the execution record, not this README. Tests include 28 retained checker tests, 50 billing/key/work-state scenarios and 12 coaching checks. Actual RevenueCat Test Store purchase/cancel/failure/restore/expiry remains a separate uncompleted gate until connected to an owned Test Store project. Share tests intercept the Android chooser and do not send anything.
 
-## RevenueCat setup and evidence still needed
+The debug preview is for testing, not Play Store release. A previous debug APK signed by another runner may not accept an in-place update. Do not delete user data without first preserving any practice notes.
 
-Create an owned RevenueCat Test Store app, a product, the mixed_signs entitlement, and a current offering. On device, open Mixed-sign practice pack and connect its public test_ SDK key. Test cancellation, failure, success, expiry and restore against the actual SDK and confirm the original exercise draft survives. Test Store transactions are sandbox events, not revenue. Never use a secret API key in a mobile client. Do not release this test-key prototype to an app store.
+## Competition status
 
-No account/configuration or live Test Store transaction was available during this initial code stage. A compiled dependency and local callback-state tests are not end-to-end payment evidence. Android runtime interaction, accessibility and lifecycle/expiry behavior still require device or emulator checks before a hackathon demo.
+RevenueCat registration and a separate Pocket draft exist; final submission and Next Gen academic-email verification remain separate. No unaided-authorship, validated learning benefit, real revenue or contest acceptance is claimed. Original work by Joseph Ayanda, with substantial AI assistance, MIT licensed.
 
-## Registration and submission remain pending
-
-Target prospect: RevenueCat Shipaton Next Gen. Registration requires explicit consent to the official rules/Devpost terms. Student-category entry needs active student status and a qualifying academic email on Devpost. Neither registration nor student verification is implied by this source. The required meaningful RevenueCat demonstration, public open-source repository, under-two-minute device video, icon and screenshot remain final-entry tasks.
-
-Sources: https://revenuecat-shipaton-2026.devpost.com/rules ; https://www.revenuecat.com/docs/getting-started/installation/android ; https://www.revenuecat.com/docs/test-and-launch/sandbox/test-store ; https://github.com/RevenueCat/purchases-android/blob/9.9.0/purchases/src/main/kotlin/com/revenuecat/purchases/ListenerConversionsCommon.kt
-
-Original work by Joseph Ayanda, developed with substantial AI assistance. MIT. Dependency licenses are retained by their distributions. Synthetic exercises, no student personal data, no measured learning or revenue claim.
+SDK documentation: https://www.revenuecat.com/docs/test-and-launch/sandbox/test-store

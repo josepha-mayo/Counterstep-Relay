@@ -3,6 +3,9 @@ package dev.joseph.countersteppocket
 import android.app.Activity
 import android.app.AlertDialog
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -11,6 +14,8 @@ import android.text.InputFilter
 import android.text.TextWatcher
 import android.text.Editable
 import android.view.View
+import android.view.inputmethod.InputMethodManager
+import android.graphics.Rect
 import android.widget.*
 import org.json.JSONObject
 import org.json.JSONArray
@@ -25,14 +30,25 @@ class MainActivity: Activity() {
  private lateinit var audit:TextView
  private var practice=Practice(Task(2,3))
  private var sequence=0
- private val access=AccessState()
- private var billingConfigured=false
- private var billingBusy=false
+ private val billing=BillingGate({SystemClock.elapsedRealtime()},{System.currentTimeMillis()})
+ private val uiHandler=Handler(Looper.getMainLooper())
+ private var requestTimeout:Runnable?=null
+ private var storeDialog:AlertDialog?=null
+ private lateinit var billingStatus:TextView
  private val prefs get()=getSharedPreferences("practice",MODE_PRIVATE)
  override fun onCreate(state:Bundle?) {
   super.onCreate(state)
   restore();render()
  }
+ override fun onStart() {
+  super.onStart(); billing.onForeground()
+  if(TestStoreConnection.configured) refreshAccess(false)
+ }
+ override fun onStop() {
+  billing.onBackground(); clearTimeout(); storeDialog?.dismiss(); storeDialog=null
+  super.onStop()
+ }
+ override fun onDestroy() { billing.destroy(); clearTimeout(); super.onDestroy() }
  private fun d(n:Int)=(n*resources.displayMetrics.density).toInt()
  private fun text(value:String,size:Float=16f,color:Int=fg,bold:Boolean=false)=TextView(this).apply {
   text=value;textSize=size;setTextColor(color);if(bold)setTypeface(typeface,Typeface.BOLD);setPadding(0,d(5),0,d(7))
@@ -49,7 +65,9 @@ class MainActivity: Activity() {
  }
  private fun render(){
   root=LinearLayout(this).apply {orientation=LinearLayout.VERTICAL;setPadding(d(22),d(28),d(22),d(28));setBackgroundColor(bg)}
-  val scroll=ScrollView(this);scroll.addView(root);setContentView(scroll)
+  root.isFocusableInTouchMode=true
+  val scroll=ScrollView(this).apply { isFillViewport=true; isSmoothScrollingEnabled=false }
+  scroll.addView(root);setContentView(scroll)
   scroll.setOnApplyWindowInsetsListener { v,i -> v.setPadding(0,i.systemWindowInsetTop,0,i.systemWindowInsetBottom);i }
   root.addView(text("COUNTERSTEP / POCKET",12f,accent,true))
   root.addView(text("Fix one line.\nKeep the work.",32f,fg,true))
@@ -58,17 +76,19 @@ class MainActivity: Activity() {
   taskBox.addView(text("Write an equivalent expanded expression. Use x, integer terms, + or -. You can put the constant first.",15f,muted))
   input=EditText(this).apply {hint="Write the expanded terms";setHintTextColor(muted);setTextColor(fg);textSize=22f;setSingleLine(true);filters=arrayOf(InputFilter.LengthFilter(120));setText(practice.draft)}
   taskBox.addView(input)
-  input.addTextChangedListener(object:TextWatcher{override fun beforeTextChanged(s:CharSequence?,start:Int,count:Int,after:Int){};override fun onTextChanged(s:CharSequence?,start:Int,before:Int,count:Int){practice.draft=s.toString();persist()};override fun afterTextChanged(s:Editable?){} })
+  input.addTextChangedListener(object:TextWatcher{override fun beforeTextChanged(s:CharSequence?,start:Int,count:Int,after:Int){};override fun onTextChanged(s:CharSequence?,start:Int,before:Int,count:Int){practice.draft=s.toString();persist();if(::result.isInitialized){result.text="Draft changed. Check this version; earlier responses stay in the record.";result.setTextColor(muted)}};override fun afterTextChanged(s:Editable?){} })
   result=text("Your first response and any hints stay in the record.",15f,muted);taskBox.addView(result)
   taskBox.addView(button("Check my step") {
    if(practice.attempts.size>=100){result.text="This task has reached its attempt limit. Start another task.";return@button}
-   val v=practice.submit();persist()
-   result.text=when(v){Verdict.CORRECT->if(practice.independentlyCorrectFirstTry)"Correct on the first try without a hint. Now try another." else "Correct repair. Earlier attempts and hints are still recorded.";Verdict.DIFFERENT->"Not equivalent yet. Check what happens to the constant inside the brackets.";Verdict.UNSUPPORTED->"This small checker accepts expanded integer-linear terms only. No equations, brackets, decimals, powers or other variables."}
-   audit.text=practice.history()
+   dismissKeyboard();val v=practice.submit();persist()
+   result.text=when(v){Verdict.CORRECT->if(practice.independentlyCorrectFirstTry)"Correct on the first try without a hint. Now try another." else "Correct repair. Earlier attempts and hints are still recorded.";Verdict.DIFFERENT->"Not equivalent yet. "+Coaching.explain(practice.task,practice.draft);Verdict.UNSUPPORTED->"This small checker accepts expanded integer-linear terms only. No equations, brackets, decimals, powers or other variables."}
+   result.setTextColor(if(v==Verdict.CORRECT)accent else fg);audit.text=practice.history()
+   reveal(result)
   })
   taskBox.addView(button("Give me a hint"){
    if(practice.hints>=100){result.text="Hint limit reached.";return@button}
-   practice.hint();persist();result.text="Multiply the outside coefficient by x AND by the constant. Keep track of the sign. This hint is recorded.";audit.text=practice.history()
+   dismissKeyboard();practice.hint();persist()
+   result.text=Coaching.hint(practice.task,practice.draft)+" This hint is recorded.";result.setTextColor(fg);audit.text=practice.history();reveal(result)
   })
   root.addView(taskBox)
   val note=box();note.addView(text("THE WORK RECORD",12f,accent,true));audit=text(practice.history(),14f,muted);note.addView(audit)
@@ -78,12 +98,25 @@ class MainActivity: Activity() {
    startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {type="text/plain";putExtra(Intent.EXTRA_TEXT,body)},"Share practice note"))
   });root.addView(note)
   root.addView(button("Start another free task") { newTask(false) })
-  root.addView(button("Mixed-sign practice pack") { if(access.active)newTask(true) else showStore() })
+  root.addView(button("Mixed-sign practice pack") { ensureStore { refreshAccess(true) } })
+  root.addView(button("Restore test access") { ensureStore { restoreTestAccess() } })
+  billingStatus=text(if(billing.active)"Recent test access is available; each new pack task is checked again." else "Optional test access has not been checked.",13f,muted)
+  root.addView(billingStatus)
+  root.requestFocus()
   root.addView(text("Free practice, hints and saving stay free. The optional pack is a RevenueCat Test Store integration under development, not a live paid offer.",13f,muted))
  }
+ private fun dismissKeyboard(){
+  (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(input.windowToken,0)
+  input.clearFocus();root.requestFocus()
+ }
+ private fun reveal(view:View){view.post { if(!isDestroyed)view.requestRectangleOnScreen(Rect(0,0,view.width,view.height),true) }}
  private fun newTask(mixed:Boolean){
-  val action={sequence++; val a=if(mixed && sequence%2==1) -(2+sequence%6) else 2+sequence%6; val b=if(mixed) sequence%15-7 else sequence%8+1;practice=Practice(Task(a,b));persist();render()}
-  if(practice.draft.isNotBlank() && !practice.solved) AlertDialog.Builder(this).setTitle("Leave this unfinished task?").setMessage("The current draft will be replaced. Share its note first to keep a copy.").setNegativeButton("Keep working",null).setPositiveButton("Start another"){_,_->action()}.show() else action()
+  val requestedWork=practice.workStamp(sequence)
+  val action={
+   if(practice.workStamp(sequence)!=requestedWork){message("Your work changed. It was not replaced.")}
+   else if(mixed && !billing.active){message("Test access needs a fresh check. Your current draft is safe.")}
+   else {sequence++; val a=if(mixed && sequence%2==1) -(2+sequence%6) else 2+sequence%6; val b=if(mixed) sequence%15-7 else sequence%8+1;practice=Practice(Task(a,b));persist();render()}}
+  if(Coaching.hasUnfinishedDraft(practice)) AlertDialog.Builder(this).setTitle("Leave this unfinished task?").setMessage("The current draft will be replaced. Share its note first to keep a copy.").setNegativeButton("Keep working",null).setPositiveButton("Start another"){_,_->action()}.show() else action()
  }
  private fun persist(){
   val j=JSONObject().put("schema",1).put("a",practice.task.coefficient).put("b",practice.task.offset).put("hints",practice.hints).put("draft",practice.draft).put("sequence",sequence)
@@ -97,32 +130,107 @@ class MainActivity: Activity() {
    practice=Practice(Task(j.getInt("a"),j.getInt("b")),attempts,j.getInt("hints"),draft)
   } catch(_:Exception){ practice=Practice(Task(2,3));Toast.makeText(this,"Saved practice was invalid. Started a fresh task.",Toast.LENGTH_LONG).show() }
  }
- private fun message(s:String){ if(!isFinishing)AlertDialog.Builder(this).setMessage(s).setPositiveButton("OK",null).show() }
- private fun showStore(){
-  if(billingBusy)return
-  if(!billingConfigured){
-   val field=EditText(this).apply{hint="Your public Test Store SDK key (test_...)";setSingleLine(true)}
-   AlertDialog.Builder(this).setTitle("Connect a Test Store").setMessage("Optional developer setup. Only a RevenueCat public Test Store key is accepted. Connecting sends SDK/device and anonymous purchase data to RevenueCat, not your typed practice. Never paste a secret API key. No real charge is made by Test Store.").setView(field).setNegativeButton("Keep free practice",null).setPositiveButton("Connect"){_,_->
-    val key=field.text.toString().trim();if(!Regex("test_[A-Za-z0-9_]{10,200}").matches(key)){message("A valid public test_ SDK key is required. Nothing was connected.");return@setPositiveButton}
-    Purchases.logLevel=LogLevel.ERROR
-    Purchases.configure(PurchasesConfiguration.Builder(applicationContext,key).build());billingConfigured=true;showStore()
-   }.show();return
-  }
-  billingBusy=true
-  Purchases.sharedInstance.getOfferingsWith(onError={billingBusy=false;access.failedRefresh();message("Could not load the Test Store. Free practice and your draft are unchanged.")}) { offerings ->
-   billingBusy=false
-   val pack=offerings.current?.availablePackages?.firstOrNull()
-   if(pack==null){message("No offering is configured. In your RevenueCat project attach a product to the mixed_signs entitlement and a current offering.");return@getOfferingsWith}
-   AlertDialog.Builder(this).setTitle("Mixed-sign practice / TEST STORE").setMessage("${pack.product.title}\n${pack.product.price.formatted}\nTest purchase only. No real payment. Basic practice and hints remain free.").setNegativeButton("Not now",null).setNeutralButton("Restore test access"){_,_->
-    billingBusy=true
-    Purchases.sharedInstance.restorePurchasesWith(onError={billingBusy=false;access.failedRefresh();message("Restore failed. Your practice is unchanged.")}) { info->billingBusy=false;access.fromSdkEntitlements(info.entitlements.active.keys);message(if(access.active)"Test access restored. Open Mixed-sign practice pack." else "No active mixed_signs test entitlement was returned.")}
-   }.setPositiveButton("Make test purchase"){_,_->
-    billingBusy=true
-    Purchases.sharedInstance.purchaseWith(PurchaseParams.Builder(this,pack).build(),onError={_,cancelled->billingBusy=false;access.failedRefresh();message(if(cancelled)"Cancelled. Your free practice and draft are unchanged." else "Purchase failed. No access was granted by this app.")}) { _,info->
-     billingBusy=false;access.fromSdkEntitlements(info.entitlements.active.keys)
-     message(if(access.active)"The SDK returned active test access. Open Mixed-sign practice pack." else "No active mixed_signs entitlement was returned. Core practice remains free.")
+ private fun canUseUi()=billing.isForeground && !isFinishing && !isDestroyed
+ private fun message(s:String){ if(canUseUi())AlertDialog.Builder(this).setMessage(s).setPositiveButton("OK",null).show() }
+ private fun status(s:String){ if(canUseUi() && ::billingStatus.isInitialized)billingStatus.text=s }
+ private fun clearTimeout(){requestTimeout?.let{uiHandler.removeCallbacks(it)};requestTimeout=null}
+ private fun begin(kind:BillingGate.Kind):BillingGate.Ticket? {
+  val ticket=billing.begin(kind)
+  if(ticket==null){status("A store check is already running, or this screen is inactive.");return null}
+  clearTimeout()
+  requestTimeout=Runnable {
+   if(billing.expireOutstanding(ticket))status("The request timed out locally. Nothing was retried; free practice is unchanged.")
+  }.also{uiHandler.postDelayed(it,30_050)}
+  return ticket
+ }
+ private fun ensureStore(action:()->Unit){
+  if(!canUseUi())return
+  if(!BuildConfig.DEBUG){message("This prototype has no production billing. Free practice remains available.");return}
+  if(TestStoreConnection.configured){action();return}
+  if(storeDialog?.isShowing==true)return
+  val field=EditText(this).apply{hint="Your public Test Store SDK key (test_...)";setSingleLine(true);filters=arrayOf(InputFilter.LengthFilter(205))}
+  storeDialog=AlertDialog.Builder(this).setTitle("Connect a Test Store")
+   .setMessage("Optional developer setup. Connecting sends SDK/device and anonymous purchase data to RevenueCat, not typed practice. Use only a public test_ SDK key. The key stays in memory until this process closes. Test Store makes no real charge.")
+   .setView(field).setNegativeButton("Keep free practice",null).setPositiveButton("Connect"){_,_->
+    if(!canUseUi())return@setPositiveButton
+    val key=field.text.toString().trim()
+    if(!TestStoreKey.accepts(key)){message("A valid public test_ SDK key is required. Nothing was connected.");return@setPositiveButton}
+    try {TestStoreConnection.connect(applicationContext,key);action()}
+    catch(_:Exception){message("The Test Store could not be connected. Use a public test_ key, not a secret key. Your draft is unchanged.")}
+   }.create()
+  storeDialog?.show()
+ }
+ private fun finishAccess(ticket:BillingGate.Ticket,info:CustomerInfo):Boolean {
+  val e=info.entitlements.active["mixed_signs"]
+  return billing.finishAccess(ticket,e?.isActive==true,e?.expirationDate?.time)
+ }
+ private fun refreshAccess(openAfter:Boolean){
+  if(!TestStoreConnection.configured)return
+  val work=practice.workStamp(sequence)
+  val ticket=begin(BillingGate.Kind.REFRESH)?:return
+  status("Checking current Test Store access...")
+  try {
+   Purchases.sharedInstance.getCustomerInfoWith(CacheFetchPolicy.FETCH_CURRENT,onError={
+    runOnUiThread{if(billing.fail(ticket)){clearTimeout();status("Access could not be checked. Core practice is still free.")}}
+   }) { info -> runOnUiThread {
+    if(finishAccess(ticket,info)){
+     clearTimeout();status(if(billing.active)"Test access checked. It will be checked again before a new pack task." else "No active mixed_signs test access was returned.")
+     if(openAfter){
+      if(work!=practice.workStamp(sequence))message("Your work changed during the check. It was not replaced. Open the pack again when ready.")
+      else if(billing.active)newTask(true) else showStore()
+     }
     }
-   }.show()
-  }
+   }}
+  } catch(_:Exception){if(billing.fail(ticket)){clearTimeout();status("The access request could not start. Nothing was retried.")}}
+ }
+ private fun restoreTestAccess(){
+  // Restore does not depend on a current offering or on loading product prices.
+  val ticket=begin(BillingGate.Kind.RESTORE)?:return
+  status("Restoring Test Store access...")
+  try {
+   Purchases.sharedInstance.restorePurchasesWith(onError={
+    runOnUiThread{if(billing.fail(ticket)){clearTimeout();status("Restore failed. Your practice and draft are unchanged.")}}
+   }) { info -> runOnUiThread{
+    if(finishAccess(ticket,info)){
+     clearTimeout();status(if(billing.active)"Test access restored. Open the mixed-sign pack to continue." else "Restore returned no active mixed_signs test access.")
+    }
+   }}
+  } catch(_:Exception){if(billing.fail(ticket)){clearTimeout();status("Restore could not start. Nothing was retried.")}}
+ }
+ private fun showStore(){
+  val ticket=begin(BillingGate.Kind.OFFERINGS)?:return
+  status("Loading the Test Store pack...")
+  try {
+   Purchases.sharedInstance.getOfferingsWith(onError={
+    runOnUiThread{if(billing.fail(ticket)){clearTimeout();status("The offering is unavailable. Restore remains available separately.")}}
+   }) { offerings -> runOnUiThread{
+    if(billing.finishOfferings(ticket)){
+     clearTimeout()
+     val pack=offerings.current?.availablePackages?.singleOrNull{it.identifier=="mixed_signs"}
+     if(pack==null){status("Configure exactly one package named mixed_signs in the current offering. Restore does not require an offering.")}
+     else if(canUseUi()){
+      storeDialog?.dismiss()
+      storeDialog=AlertDialog.Builder(this).setTitle("Mixed-sign practice / TEST STORE")
+       .setMessage("${pack.product.title}\n${pack.product.price.formatted}\nTest purchase only; no real payment. Free practice, hints and saving remain free.")
+       .setNegativeButton("Not now",null).setNeutralButton("Restore test access"){_,_->restoreTestAccess()}
+       .setPositiveButton("Make test purchase"){_,_->purchaseTestPack(pack)}.create()
+      storeDialog?.show()
+     }
+    }
+   }}
+  }catch(_:Exception){if(billing.fail(ticket)){clearTimeout();status("The offering request could not start. Nothing was retried.")}}
+ }
+ private fun purchaseTestPack(pack:com.revenuecat.purchases.Package){
+  val ticket=begin(BillingGate.Kind.PURCHASE)?:return
+  status("Waiting for the Test Store result...")
+  try {
+   Purchases.sharedInstance.purchaseWith(PurchaseParams.Builder(this,pack).build(),onError={_,cancelled->
+    runOnUiThread{if(billing.fail(ticket)){clearTimeout();status(if(cancelled)"Test purchase cancelled. Your draft is unchanged." else "Purchase failed. No access was granted by this app.")}}
+   }) { _,info -> runOnUiThread{
+    if(finishAccess(ticket,info)){
+     clearTimeout();status(if(billing.active)"The SDK returned active test access. Open the pack when ready." else "No active mixed_signs entitlement was returned. Core practice stays free.")
+    }
+   }}
+  }catch(_:Exception){if(billing.fail(ticket)){clearTimeout();status("The test purchase could not start. Nothing was retried.")}}
  }
 }

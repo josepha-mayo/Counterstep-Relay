@@ -33,7 +33,8 @@ class DeviceWorkflowTest {
   Assert.assertTrue(context.getSharedPreferences("practice",Context.MODE_PRIVATE).edit().clear().commit())
   scenario=ActivityScenario.launch(MainActivity::class.java)
  }
- @After fun close(){scenario.close()}
+ @Rule @JvmField val testName=org.junit.rules.TestName()
+ @After fun close(){try{shot("after-"+testName.methodName)}finally{scenario.close()}}
  private fun enter(s:String){onView(isAssignableFrom(EditText::class.java)).perform(scrollTo(),replaceText(s),closeSoftKeyboard())}
  private fun tap(s:String){onView(allOf(withText(s),isAssignableFrom(Button::class.java))).perform(scrollTo(),click())}
  private fun visible(s:String){onView(withText(containsString(s))).perform(scrollTo()).check(matches(isDisplayed()))}
@@ -126,5 +127,37 @@ class DeviceWorkflowTest {
    }
    walk(activity.window.decorView);Assert.assertTrue(count>=5)
   }
+ }
+
+ @Test fun changedDraftInvalidatesOldSuccess(){
+  enter("2x+6");tap("Check my step");visible("Correct on the first try without a hint.")
+  enter("2x+3");visible("Draft changed. Check this version")
+  visible("1. 2x+6 | correct | 0 hint(s) before response")
+  tap("Start another free task")
+  onView(withText("Leave this unfinished task?")).check(matches(isDisplayed()))
+  onView(withText("Keep working")).perform(click())
+  onView(isAssignableFrom(EditText::class.java)).check(matches(withText("2x+3")))
+ }
+ @Test fun constantAndVariableFeedbackAreDifferent(){
+  enter("2x+3");tap("Check my step");visible("The x term agrees.")
+  enter("3x+6");tap("Check my step");visible("The constant term agrees.")
+  shot("05-targeted-feedback")
+ }
+ @Test fun restoreHasItsOwnUnconfiguredEntry(){
+  enter("2x+");tap("Restore test access")
+  onView(withText("Connect a Test Store")).check(matches(isDisplayed()))
+  onView(withText("Keep free practice")).perform(click())
+  onView(isAssignableFrom(EditText::class.java)).check(matches(withText("2x+")))
+ }
+ @Test fun newestWrongAnswerIsNotPresentedAsSolved(){
+  enter("2x+6");tap("Check my step");enter("2x+3");tap("Check my step")
+  visible("Not equivalent yet.");visible("2. 2x+3 | different | 0 hint(s) before response")
+  scenario.recreate();tap("Start another free task")
+  onView(withText("Leave this unfinished task?")).check(matches(isDisplayed()))
+ }
+ @Test fun hintsDoNotChangeOrSubmitTheDraft(){
+  enter("3x+6");tap("Give me a hint");visible("The constant term agrees.")
+  onView(isAssignableFrom(EditText::class.java)).check(matches(withText("3x+6")))
+  visible("No response yet.");shot("06-recorded-hint")
  }
 }
