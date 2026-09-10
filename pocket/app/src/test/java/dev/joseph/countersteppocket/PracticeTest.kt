@@ -19,7 +19,12 @@ class PracticeTest {
  @Test fun excessiveTerms(){assertNull(Expansion.parse("x"+"+1".repeat(20)))}
  @Test fun emptyRejected(){assertNull(Expansion.parse("   "))}
  @Test fun minusX(){assertEquals(-1L to 3L,Expansion.parse("-x+3"))}
- @Test fun generatedGrid(){for(a in -9..9)if(a!=0)for(b in -9..9){val c=a*b;val text="${a}x${if(c<0)"" else "+"}$c";assertEquals(Verdict.CORRECT,Expansion.check(Task(a,b),text))}}
+ @Test fun generatedGrid(){
+  for(a in -9..9)if(a!=0)for(b in -9..9){val c=a*b;val text="${a}x${if(c<0)"" else "+"}$c";assertEquals(Verdict.CORRECT,Expansion.check(Task(a,b),text))}
+  // Additional inputs inside this retained method, not nine extra test methods.
+  for(raw in listOf("2x+0 6","0 2x+6","0\t2*x+6","0\n2x+6","2x+0\t6","2x+0\n6"))assertEquals(Verdict.UNSUPPORTED,Expansion.check(Task(2,3),raw))
+  for(raw in listOf(" 2 x + 6 ","6 + 2 * x"," + 2x + 6 "))assertEquals(Verdict.CORRECT,Expansion.check(Task(2,3),raw))
+ }
  @Test fun firstResponseIsPreserved(){val p=Practice(Task(2,3));p.draft="2x+3";p.submit();p.draft="2x+6";p.submit();assertTrue(p.solved);assertFalse(p.independentlyCorrectFirstTry);assertEquals("2x+3",p.attempts.first().text)}
  @Test fun hintTaintsFirstTry(){val p=Practice(Task(2,3));p.hint();p.draft="2x+6";p.submit();assertTrue(p.solved);assertFalse(p.independentlyCorrectFirstTry)}
  @Test fun independentFirstTry(){val p=Practice(Task(2,3));p.draft="2x+6";p.submit();assertTrue(p.independentlyCorrectFirstTry)}

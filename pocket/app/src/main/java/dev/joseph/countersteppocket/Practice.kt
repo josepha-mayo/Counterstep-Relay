@@ -11,6 +11,8 @@ object Expansion {
  private val terms = Regex("[+-]?(?:[0-9]+\\*?x|x|[0-9]+)")
  fun parse(raw: String): Pair<Long,Long>? {
   if (raw.length > 120 || raw.any { it !in "0123456789x*+- \t\r\n" }) return null
+  // Spaces may separate terms or multiplication tokens, never split the digits of one integer.
+  if (Regex("[0-9][ \t\r\n]+[0-9]").containsMatchIn(raw)) return null
   val s=raw.filterNot { it.isWhitespace() }
   if (s.isEmpty()) return null
   var position=0; var a=0L; var b=0L; var count=0
