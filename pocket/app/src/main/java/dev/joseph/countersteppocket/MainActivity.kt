@@ -73,7 +73,7 @@ class MainActivity: Activity() {
   root.isFocusableInTouchMode=true
   scroll=ScrollView(this).apply {
    isFillViewport=true;isSmoothScrollingEnabled=false;setBackgroundColor(bg)
-   addView(root,ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT))
+   addView(root,FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT))
   }
   scroll.setOnApplyWindowInsetsListener { v,i ->
    if(Build.VERSION.SDK_INT>=30){
