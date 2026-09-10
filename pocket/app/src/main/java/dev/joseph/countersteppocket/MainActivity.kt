@@ -111,9 +111,9 @@ class MainActivity: Activity() {
   root.addView(taskBox)
   audit=text(practice.history(),14f,muted)
   root.addView(audit)
+  root.addView(button("Restore test access") { ensureStore { restoreTestAccess() } })
   root.addView(button("Start another free task") { newTask(false) })
   root.addView(button("Mixed-sign practice pack") { ensureStore { refreshAccess(true) } })
-  root.addView(button("Restore test access") { ensureStore { restoreTestAccess() } })
   root.addView(button("Share my practice note"){
    persist();val body="Counterstep Pocket personal practice\nTask: ${practice.task.expression}\nDraft: ${practice.draft}\n${practice.history()}\nHints requested: ${practice.hints}\nPersonal self-reported practice, not an authenticated grade."
    startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {type="text/plain";putExtra(Intent.EXTRA_TEXT,body)},"Share practice note"))
