@@ -1,0 +1,27 @@
+name: Stop stalled Pocket test cleanup
+on:
+  push:
+    branches: [test/pocket-device-20260910]
+    paths: [.github/workflows/pocket-stop-stalled.yml]
+permissions:
+  contents: read
+  actions: write
+jobs:
+  stop:
+    if: github.repository == 'josepha-mayo/Counterstep-Relay' && github.ref == 'refs/heads/test/pocket-device-20260910'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Cancel only the known failed emulator run; retain its logs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          endpoint='repos/josepha-mayo/Counterstep-Relay/actions/runs/34468802354'
+          status=$(gh api "$endpoint" --jq .status)
+          if [ "$status" = completed ]; then echo 'Already stopped.'; exit 0; fi
+          gh api --method POST "$endpoint/cancel" || true
+          sleep 12
+          status=$(gh api "$endpoint" --jq .status)
+          if [ "$status" != completed ]; then gh api --method POST "$endpoint/force-cancel"; fi
+          echo 'Stop requested for the known stalled test only. No logs, artifacts, refs or application data deleted.'
