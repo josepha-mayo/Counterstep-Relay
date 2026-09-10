@@ -32,11 +32,17 @@ elif mode=='restart':
     old=adb('shell','pidof',pkg).strip();assert old
     adb('shell','am','force-stop',pkg);adb('shell','am','start','-W','-n',pkg+'/.MainActivity');time.sleep(.5)
     new=adb('shell','pidof',pkg).strip();assert new and new!=old
-    after=tree();assert any(n.attrib.get('text')=='2x+'for n in after.iter('node'));assert any(n.attrib.get('text')=='No response yet.'for n in after.iter('node'))
+    after=tree();assert any(n.attrib.get('text')=='2x+'for n in after.iter('node'))
+    (O/'restarted-draft-screen.png').write_bytes(subprocess.check_output(['adb','exec-out','screencap','-p'],timeout=20))
+    # The work record may be below the fold. Inspect it through actual swipes, not a hidden-view assertion.
+    for _ in range(4):
+        if any(n.attrib.get('text')=='No response yet.'for n in after.iter('node')):break
+        adb('shell','input','swipe','540','1500','540','500','350');time.sleep(.2);after=tree()
+    assert any(n.attrib.get('text')=='No response yet.'for n in after.iter('node'))
     save('process-restart.json',{'status':'passed','old_process':old,'new_process':new,'draft_preserved':'2x+','no_attempt_invented':True})
     (O/'restarted-ui.xml').write_bytes(ET.tostring(after));(O/'restarted-screen.png').write_bytes(subprocess.check_output(['adb','exec-out','screencap','-p'],timeout=20))
 elif mode=='finish':
-    jvm=counts('pocket/app/build/test-results/testDebugUnitTest');device=counts('pocket/app/build/outputs/androidTest-results/connected');assert jvm['tests']==90 and device['tests']==19,(jvm,device)
+    jvm=counts('pocket/app/build/test-results/testDebugUnitTest');native=json.loads((O/'instrumented-tests.json').read_text());assert native['status']=='passed';device=native['tests'];assert jvm['tests']==90 and device['tests']==19 and not any(device[k]for k in ['failures','errors','skipped']),(jvm,device)
     report=json.loads((O/'build-verification.json').read_text());report.update(status='passed',android_instrumented_tests=device,process_restart=json.loads((O/'process-restart.json').read_text()),android_api=35,device='Android emulator, not physical Redmi hardware',test_store_configured=False,purchase_executed=False,scope='Native Android repair, draft, scrolling, lifecycle, export-intent and unconfigured-store checks; 90 JVM scenarios include billing state/expiry cases, not real SDK purchases. No learning-outcome or payment-success claim.')
     save('verification.json',report)
 else:raise SystemExit('Expected build, restart or finish')

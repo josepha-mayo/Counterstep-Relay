@@ -57,9 +57,7 @@ jobs:
           adb shell getprop > device-out/device-properties.txt
       - name: Exercise native UI and lifecycle without provider credentials
         run: |
-          set -o pipefail
-          cd pocket
-          gradle --no-daemon :app:connectedDebugAndroidTest 2>&1 | tee ../device-out/instrumentation.log
+          python3 pocket/tools/native_device.py
       - name: Save screenshots and verify real process restart
         run: |
           mkdir -p device-out/screens
