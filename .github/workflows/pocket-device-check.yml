@@ -1,12 +1,12 @@
 name: Counterstep Pocket Android device checks
 on:
   push:
-    branches: [test/pocket-device-20260910]
+    branches: [fix/pocket-practice-20260910]
     paths: [.github/workflows/pocket-device-check.yml, pocket/**]
 permissions:
   contents: read
 concurrency:
-  group: counterstep-pocket-device
+  group: counterstep-pocket-device-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   device:
@@ -61,21 +61,21 @@ jobs:
       - name: Save screenshots and verify real process restart
         run: |
           mkdir -p device-out/screens
-          timeout 20 adb pull /sdcard/Android/data/dev.joseph.countersteppocket/files/device-evidence/ device-out/screens/
+          timeout 20 adb pull /sdcard/Download/pocket-device-evidence/ device-out/screens/
           python3 pocket/tools/device_release.py restart
           python3 pocket/tools/device_release.py finish
       - name: Preserve diagnostics and terminate emulator
         if: always()
         run: |
           mkdir -p device-out/screens
-          timeout 12 adb pull /sdcard/Android/data/dev.joseph.countersteppocket/files/device-evidence/ device-out/screens/ || true
+          timeout 12 adb pull /sdcard/Download/pocket-device-evidence/ device-out/screens/ || true
           timeout 12 adb logcat -d -s AndroidRuntime > device-out/crash-log.txt || true
           timeout 8 adb emu kill || true
           if [ -f device-out/emulator.pid ]; then kill "$(cat device-out/emulator.pid)" 2>/dev/null || true; fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: counterstep-pocket-device-check
+          name: counterstep-pocket-practice-check
           path: |
             device-out/
             pocket/app/build/test-results/

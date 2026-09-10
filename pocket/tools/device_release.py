@@ -15,7 +15,7 @@ def tree():
     return ET.fromstring(adb('shell','cat','/sdcard/pocket-ui.xml'))
 mode=sys.argv[1]
 if mode=='build':
-    jvm=counts('pocket/app/build/test-results/testDebugUnitTest');assert jvm['tests']==90,jvm
+    jvm=counts('pocket/app/build/test-results/testDebugUnitTest');assert jvm['tests']==98,jvm
     apk=R/'pocket/app/build/outputs/apk/debug/app-debug.apk';shutil.copy2(apk,O/'Counterstep-Pocket-0.3-preview.apk')
     with zipfile.ZipFile(O/'Counterstep-Pocket-source.zip','w',zipfile.ZIP_DEFLATED)as z:
         for p in (R/'pocket').rglob('*'):
@@ -42,7 +42,7 @@ elif mode=='restart':
     save('process-restart.json',{'status':'passed','old_process':old,'new_process':new,'draft_preserved':'2x+','no_attempt_invented':True})
     (O/'restarted-ui.xml').write_bytes(ET.tostring(after));(O/'restarted-screen.png').write_bytes(subprocess.check_output(['adb','exec-out','screencap','-p'],timeout=20))
 elif mode=='finish':
-    jvm=counts('pocket/app/build/test-results/testDebugUnitTest');native=json.loads((O/'instrumented-tests.json').read_text());assert native['status']=='passed';device=native['tests'];assert jvm['tests']==90 and device['tests']==19 and not any(device[k]for k in ['failures','errors','skipped']),(jvm,device)
-    report=json.loads((O/'build-verification.json').read_text());report.update(status='passed',android_instrumented_tests=device,process_restart=json.loads((O/'process-restart.json').read_text()),android_api=35,device='Android emulator, not physical Redmi hardware',test_store_configured=False,purchase_executed=False,scope='Native Android repair, draft, scrolling, lifecycle, export-intent and unconfigured-store checks; 90 JVM scenarios include billing state/expiry cases, not real SDK purchases. No learning-outcome or payment-success claim.')
+    jvm=counts('pocket/app/build/test-results/testDebugUnitTest');native=json.loads((O/'instrumented-tests.json').read_text());assert native['status']=='passed';device=native['tests'];assert jvm['tests']==98 and device['tests']==19 and not any(device[k]for k in ['failures','errors','skipped']),(jvm,device)
+    report=json.loads((O/'build-verification.json').read_text());report.update(status='passed',android_instrumented_tests=device,process_restart=json.loads((O/'process-restart.json').read_text()),android_api=35,device='Android emulator, not physical Redmi hardware',test_store_configured=False,purchase_executed=False,scope='Native Android repair, draft, scrolling, lifecycle, export-intent and unconfigured-store checks; 98 JVM scenarios include billing state/expiry cases, not real SDK purchases. No learning-outcome or payment-success claim.')
     save('verification.json',report)
 else:raise SystemExit('Expected build, restart or finish')

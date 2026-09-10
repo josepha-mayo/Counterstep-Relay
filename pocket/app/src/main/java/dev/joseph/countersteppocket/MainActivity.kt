@@ -2,6 +2,7 @@ package dev.joseph.countersteppocket
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -11,11 +12,14 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.content.Intent
 import android.text.InputFilter
+import android.text.InputType
 import android.text.TextWatcher
 import android.text.Editable
 import android.view.View
+import android.view.ViewGroup
+import android.view.WindowInsets
+import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
-import android.graphics.Rect
 import android.widget.*
 import org.json.JSONObject
 import org.json.JSONArray
@@ -28,6 +32,7 @@ class MainActivity: Activity() {
  private lateinit var input:EditText
  private lateinit var result:TextView
  private lateinit var audit:TextView
+ private lateinit var scroll:ScrollView
  private var practice=Practice(Task(2,3))
  private var sequence=0
  private val billing=BillingGate({SystemClock.elapsedRealtime()},{System.currentTimeMillis()})
@@ -64,31 +69,44 @@ class MainActivity: Activity() {
   setOnClickListener{action()}
  }
  private fun render(){
-  root=LinearLayout(this).apply {orientation=LinearLayout.VERTICAL;setPadding(d(22),d(28),d(22),d(28));setBackgroundColor(bg)}
+  root=LinearLayout(this).apply {orientation=LinearLayout.VERTICAL;setPadding(d(20),d(18),d(20),d(22));setBackgroundColor(bg)}
   root.isFocusableInTouchMode=true
-  val scroll=ScrollView(this).apply { isFillViewport=true; isSmoothScrollingEnabled=false }
-  scroll.addView(root);setContentView(scroll)
-  scroll.setOnApplyWindowInsetsListener { v,i -> v.setPadding(0,i.systemWindowInsetTop,0,i.systemWindowInsetBottom);i }
+  scroll=ScrollView(this).apply {
+   isFillViewport=true;isSmoothScrollingEnabled=false;setBackgroundColor(bg)
+   addView(root,ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT))
+  }
+  scroll.setOnApplyWindowInsetsListener { v,i ->
+   if(Build.VERSION.SDK_INT>=30){
+    val bars=i.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+    val keyboard=i.getInsets(WindowInsets.Type.ime())
+    v.setPadding(bars.left,bars.top,bars.right,maxOf(bars.bottom,keyboard.bottom))
+   } else {
+    @Suppress("DEPRECATION")
+    v.setPadding(i.systemWindowInsetLeft,i.systemWindowInsetTop,i.systemWindowInsetRight,i.systemWindowInsetBottom)
+   }
+   i
+  }
+  setContentView(scroll)
   root.addView(text("COUNTERSTEP / POCKET",12f,accent,true))
-  root.addView(text("Fix one line.\nKeep the work.",32f,fg,true))
-  root.addView(text("A focused algebra repair, not an answer to copy.",16f,muted))
-  val taskBox=box();taskBox.addView(text("EXPAND BOTH TERMS",12f,accent,true));taskBox.addView(text(practice.task.expression,36f,fg,true))
-  taskBox.addView(text("Write an equivalent expanded expression. Use x, integer terms, + or -. You can put the constant first.",15f,muted))
-  input=EditText(this).apply {hint="Write the expanded terms";setHintTextColor(muted);setTextColor(fg);textSize=22f;setSingleLine(true);filters=arrayOf(InputFilter.LengthFilter(120));setText(practice.draft)}
+  root.addView(text("Fix one line.",28f,fg,true))
+  root.addView(text("Work offline. Keep your attempts and hints.",14f,muted))
+  val taskBox=box();taskBox.addView(text("EXPAND BOTH TERMS",12f,accent,true));taskBox.addView(text(practice.task.expression,34f,fg,true))
+  taskBox.addView(text("Write expanded integer terms using x, + and -. The constant can come first.",14f,muted))
+  input=EditText(this).apply {hint="Write the expanded terms";contentDescription="Expanded expression";setHintTextColor(muted);setTextColor(fg);textSize=22f;setSingleLine(true);inputType=InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS;imeOptions=EditorInfo.IME_ACTION_DONE or EditorInfo.IME_FLAG_NO_EXTRACT_UI;filters=arrayOf(InputFilter.LengthFilter(120));setText(practice.draft)}
   taskBox.addView(input)
   input.addTextChangedListener(object:TextWatcher{override fun beforeTextChanged(s:CharSequence?,start:Int,count:Int,after:Int){};override fun onTextChanged(s:CharSequence?,start:Int,before:Int,count:Int){practice.draft=s.toString();persist();if(::result.isInitialized){result.text="Draft changed. Check this version; earlier responses stay in the record.";result.setTextColor(muted)}};override fun afterTextChanged(s:Editable?){} })
+  input.setOnEditorActionListener { _,action,event ->
+   if(action==EditorInfo.IME_ACTION_DONE || (event?.keyCode==android.view.KeyEvent.KEYCODE_ENTER && event.action==android.view.KeyEvent.ACTION_UP)){checkStep();true}else false
+  }
   result=text("Your first response and any hints stay in the record.",15f,muted);taskBox.addView(result)
-  taskBox.addView(button("Check my step") {
-   if(practice.attempts.size>=100){result.text="This task has reached its attempt limit. Start another task.";return@button}
-   dismissKeyboard();val v=practice.submit();persist()
-   result.text=when(v){Verdict.CORRECT->if(practice.independentlyCorrectFirstTry)"Correct on the first try without a hint. Now try another." else "Correct repair. Earlier attempts and hints are still recorded.";Verdict.DIFFERENT->"Not equivalent yet. "+Coaching.explain(practice.task,practice.draft);Verdict.UNSUPPORTED->"This small checker accepts expanded integer-linear terms only. No equations, brackets, decimals, powers or other variables."}
-   result.setTextColor(if(v==Verdict.CORRECT)accent else fg);audit.text=practice.history()
-   reveal(result)
-  })
+  val symbols=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL}
+  for((label,token) in listOf("x" to "x","+" to "+","−" to "-","⌫" to ""))symbols.addView(button(label){editMathToken(token)}.apply{layoutParams=LinearLayout.LayoutParams(0,d(48),1f).apply{setMargins(0,0,d(4),0)}})
+  taskBox.addView(symbols)
+  taskBox.addView(button("Check my step"){checkStep()})
   taskBox.addView(button("Give me a hint"){
    if(practice.hints>=100){result.text="Hint limit reached.";return@button}
    dismissKeyboard();practice.hint();persist()
-   result.text=Coaching.hint(practice.task,practice.draft)+" This hint is recorded.";result.setTextColor(fg);audit.text=practice.history();reveal(result)
+   result.text=Coaching.progressiveHint(practice)+" This hint is recorded.";result.setTextColor(fg);audit.text=practice.history();reveal(result)
   })
   root.addView(taskBox)
   val note=box();note.addView(text("THE WORK RECORD",12f,accent,true));audit=text(practice.history(),14f,muted);note.addView(audit)
@@ -104,12 +122,24 @@ class MainActivity: Activity() {
   root.addView(billingStatus)
   root.requestFocus()
   root.addView(text("Free practice, hints and saving stay free. The optional pack is a RevenueCat Test Store integration under development, not a live paid offer.",13f,muted))
+  scroll.requestApplyInsets()
  }
  private fun dismissKeyboard(){
   (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(input.windowToken,0)
   input.clearFocus();root.requestFocus()
  }
- private fun reveal(view:View){view.post { if(!isDestroyed)view.requestRectangleOnScreen(Rect(0,0,view.width,view.height),true) }}
+ private fun reveal(view:View){view.post { if(!isDestroyed)scroll.smoothScrollTo(0,(view.top-d(12)).coerceAtLeast(0)) }}
+ private fun checkStep(){
+  val problem=Coaching.cannotCheck(practice)
+  if(problem!=null){result.text=problem;result.setTextColor(fg);return}
+  dismissKeyboard();val v=practice.submit();persist()
+  result.text=when(v){Verdict.CORRECT->if(practice.independentlyCorrectFirstTry)"Correct on the first try without a hint. Now try another." else "Correct repair. Earlier attempts and hints are still recorded.";Verdict.DIFFERENT->"Not equivalent yet. "+Coaching.explain(practice.task,practice.draft);Verdict.UNSUPPORTED->"This small checker accepts expanded integer-linear terms only. No equations, brackets, decimals, powers or other variables."}
+  result.setTextColor(if(v==Verdict.CORRECT)accent else fg);audit.text=practice.history();reveal(result)
+ }
+ private fun editMathToken(token:String){
+  val start=minOf(input.selectionStart.coerceAtLeast(0),input.selectionEnd.coerceAtLeast(0));val end=maxOf(input.selectionStart.coerceAtLeast(0),input.selectionEnd.coerceAtLeast(0))
+  if(token.isEmpty()){if(start!=end)input.text.delete(start,end) else if(start>0)input.text.delete(start-1,start)} else input.text.replace(start,end,token)
+ }
  private fun newTask(mixed:Boolean){
   val requestedWork=practice.workStamp(sequence)
   val action={

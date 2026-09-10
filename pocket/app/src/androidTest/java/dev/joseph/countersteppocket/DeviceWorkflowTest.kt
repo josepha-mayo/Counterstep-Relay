@@ -35,15 +35,25 @@ class DeviceWorkflowTest {
  }
  @Rule @JvmField val testName=org.junit.rules.TestName()
  @After fun close(){try{shot("after-"+testName.methodName)}finally{scenario.close()}}
- private fun enter(s:String){onView(isAssignableFrom(EditText::class.java)).perform(scrollTo(),replaceText(s),closeSoftKeyboard())}
- private fun tap(s:String){onView(allOf(withText(s),isAssignableFrom(Button::class.java))).perform(scrollTo(),click())}
- private fun visible(s:String){onView(withText(containsString(s))).perform(scrollTo()).check(matches(isDisplayed()))}
+ private fun enter(s:String)=withDiagnostic("enter"){onView(isAssignableFrom(EditText::class.java)).perform(scrollTo(),replaceText(s),closeSoftKeyboard())}
+ private fun tap(s:String)=withDiagnostic("tap"){onView(allOf(withText(s),isAssignableFrom(Button::class.java))).perform(scrollTo(),click())}
+ private fun visible(s:String)=withDiagnostic("visible"){onView(withText(containsString(s))).perform(scrollTo()).check(matches(isDisplayed()))}
+ private fun withDiagnostic(action:String,work:()->Unit){
+  try{work()}catch(error:Throwable){runCatching{shot("failed-$action-${System.nanoTime()}")};throw error}
+ }
  private fun shot(name:String){
   instrumentation.waitForIdleSync()
   val file=File(context.getExternalFilesDir(null),"device-evidence/$name.png");file.parentFile!!.mkdirs()
   val bitmap=instrumentation.uiAutomation.takeScreenshot();Assert.assertNotNull(bitmap)
   file.outputStream().use { Assert.assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,it)) }
   bitmap.recycle()
+  val evidence="/sdcard/Download/pocket-device-evidence"
+  fun shell(command:String){
+   android.os.ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(command)).use{it.readBytes()}
+  }
+  require(Regex("[A-Za-z0-9-]+").matches(name))
+  shell("mkdir -p $evidence")
+  shell("cp ${file.absolutePath} $evidence/$name.png")
  }
  @Test fun initialScreenDoesNotLeakSolution(){
   onView(withText("2(x+3)")).check(matches(isDisplayed()))
