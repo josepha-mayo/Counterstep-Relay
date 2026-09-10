@@ -38,7 +38,11 @@ object Coaching {
         val a = practice.task.coefficient
         val b = practice.task.offset
         return when (practice.hints) {
-            1 -> "Multiply the outside coefficient by x AND by the constant."
+            1 -> when (focus(practice.task, practice.draft)) {
+                Focus.CONSTANT, Focus.COEFFICIENT ->
+                    explain(practice.task, practice.draft) + " Multiply the outside coefficient by each term."
+                else -> "Multiply the outside coefficient by x AND by the constant."
+            }
             2 -> "There are two products: ($a) times x, and ($a) times ($b). Do both before combining your expression."
             else -> when {
                 b == 0 -> "The constant product is zero. Keep the x term."
