@@ -98,7 +98,7 @@ class MainActivity: Activity() {
   input.setOnEditorActionListener { _,action,event ->
    if(action==EditorInfo.IME_ACTION_DONE || (event?.keyCode==android.view.KeyEvent.KEYCODE_ENTER && event.action==android.view.KeyEvent.ACTION_UP)){checkStep();true}else false
   }
-  result=text("Your first response and any hints stay in the record.",15f,muted);taskBox.addView(result)
+  result=text(currentRecordMessage(),15f,muted);taskBox.addView(result)
   val symbols=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL}
   for((label,token) in listOf("x" to "x","+" to "+","−" to "-","⌫" to ""))symbols.addView(button(label){editMathToken(token)}.apply{layoutParams=LinearLayout.LayoutParams(0,d(48),1f).apply{setMargins(0,0,d(4),0)}})
   taskBox.addView(symbols)
@@ -106,7 +106,7 @@ class MainActivity: Activity() {
   taskBox.addView(button("Give me a hint"){
    if(practice.hints>=100){result.text="Hint limit reached.";return@button}
    dismissKeyboard();practice.hint();persist()
-   result.text=Coaching.progressiveHint(practice)+" This hint is recorded.";result.setTextColor(fg);audit.text=practice.history();reveal(result)
+   result.text=Coaching.progressiveHint(practice)+" This hint is recorded.\n"+practice.history();result.setTextColor(fg);audit.text=practice.history();reveal(result)
   })
   root.addView(taskBox)
   root.addView(button("Start another free task") { newTask(false) })
@@ -114,12 +114,13 @@ class MainActivity: Activity() {
   root.addView(button("Restore test access") { ensureStore { restoreTestAccess() } })
   billingStatus=text(if(billing.active)"Recent test access is available; each new pack task is checked again." else "Optional test access has not been checked.",13f,muted)
   root.addView(billingStatus)
-  val note=box();note.addView(text("THE WORK RECORD",12f,accent,true));audit=text(practice.history(),14f,muted);note.addView(audit)
-  note.addView(text("Personal practice only. Local records can be edited; they are not authenticated grades or proof of mastery.",12f,muted))
-  note.addView(button("Share my practice note"){
+  root.addView(button("Share my practice note"){
    persist();val body="Counterstep Pocket personal practice\nTask: ${practice.task.expression}\nDraft: ${practice.draft}\n${practice.history()}\nHints requested: ${practice.hints}\nPersonal self-reported practice, not an authenticated grade."
    startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {type="text/plain";putExtra(Intent.EXTRA_TEXT,body)},"Share practice note"))
-  });root.addView(note)
+  })
+  val note=box();note.addView(text("THE WORK RECORD",12f,accent,true));audit=text(practice.history(),14f,muted);note.addView(audit)
+  note.addView(text("Personal practice only. Local records can be edited; they are not authenticated grades or proof of mastery.",12f,muted))
+  root.addView(note)
   root.requestFocus()
   root.addView(text("Free practice, hints and saving stay free. The optional pack is a RevenueCat Test Store integration under development, not a live paid offer.",13f,muted))
   scroll.requestApplyInsets()
@@ -133,8 +134,16 @@ class MainActivity: Activity() {
   val problem=Coaching.cannotCheck(practice)
   if(problem!=null){result.text=problem;result.setTextColor(fg);return}
   dismissKeyboard();val v=practice.submit();persist()
-  result.text=when(v){Verdict.CORRECT->if(practice.independentlyCorrectFirstTry)"Correct on the first try without a hint. Now try another." else "Correct repair. Earlier attempts and hints are still recorded.";Verdict.DIFFERENT->"Not equivalent yet. "+Coaching.explain(practice.task,practice.draft);Verdict.UNSUPPORTED->"This small checker accepts expanded integer-linear terms only. No equations, brackets, decimals, powers or other variables."}
+  result.text=(when(v){Verdict.CORRECT->if(practice.independentlyCorrectFirstTry)"Correct on the first try without a hint. Now try another." else "Correct repair. Earlier attempts and hints are still recorded.";Verdict.DIFFERENT->"Not equivalent yet. "+Coaching.explain(practice.task,practice.draft);Verdict.UNSUPPORTED->"This small checker accepts expanded integer-linear terms only. No equations, brackets, decimals, powers or other variables."})+"\n"+practice.history()
   result.setTextColor(if(v==Verdict.CORRECT)accent else fg);audit.text=practice.history();reveal(result)
+ }
+ private fun currentRecordMessage():String {
+  val latest=practice.attempts.lastOrNull()
+  return when {
+   latest==null -> "No response yet. Your first response and any hints stay in the record."
+   latest.text!=practice.draft -> "Draft changed. Check this version; earlier responses stay in the record.\n${practice.history()}"
+   else -> practice.history()
+  }
  }
  private fun editMathToken(token:String){
   val start=minOf(input.selectionStart.coerceAtLeast(0),input.selectionEnd.coerceAtLeast(0));val end=maxOf(input.selectionStart.coerceAtLeast(0),input.selectionEnd.coerceAtLeast(0))
