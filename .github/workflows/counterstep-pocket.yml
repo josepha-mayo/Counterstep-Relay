@@ -29,7 +29,9 @@ jobs:
           from pathlib import Path
           p=Path('pocket/app/src/main/java/dev/joseph/countersteppocket/MainActivity.kt')
           s=p.read_text().replace('Example format: 2x + 6','Write the expanded terms')
-          assert 'Example format: 2x + 6' not in s
+          assert s.count('pack.storeProduct') == 2
+          s=s.replace('pack.storeProduct','pack.product')
+          assert 'Example format: 2x + 6' not in s and 'pack.storeProduct' not in s
           p.write_text(s)
           PY
       - name: Build APK and execute focused JVM checks
