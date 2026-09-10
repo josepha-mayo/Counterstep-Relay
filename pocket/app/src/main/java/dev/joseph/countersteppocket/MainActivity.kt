@@ -111,8 +111,10 @@ class MainActivity: Activity() {
   root.addView(taskBox)
   audit=text(practice.history(),14f,muted)
   root.addView(audit)
-  root.addView(button("Restore test access") { ensureStore { restoreTestAccess() } })
-  root.addView(button("Start another free task") { newTask(false) })
+  val actions=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL}
+  actions.addView(button("Restore test access") { ensureStore { restoreTestAccess() } }.apply{layoutParams=LinearLayout.LayoutParams(0,d(50),1f).apply{setMargins(0,0,d(4),0)}})
+  actions.addView(button("Start another free task") { newTask(false) }.apply{layoutParams=LinearLayout.LayoutParams(0,d(50),1f)})
+  root.addView(actions)
   root.addView(button("Mixed-sign practice pack") { ensureStore { refreshAccess(true) } })
   root.addView(button("Share my practice note"){
    persist();val body="Counterstep Pocket personal practice\nTask: ${practice.task.expression}\nDraft: ${practice.draft}\n${practice.history()}\nHints requested: ${practice.hints}\nPersonal self-reported practice, not an authenticated grade."
