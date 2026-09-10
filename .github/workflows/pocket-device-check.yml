@@ -7,12 +7,12 @@ permissions:
   contents: read
 concurrency:
   group: counterstep-pocket-device
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   device:
     if: github.ref == 'refs/heads/test/pocket-device-20260910'
     runs-on: ubuntu-24.04
-    timeout-minutes: 22
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,11 +39,16 @@ jobs:
           set -euo pipefail
           test -c /dev/kvm
           sudo chmod 666 /dev/kvm
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platform-tools' 'emulator' 'system-images;android-35;google_apis;x86_64' > device-out/sdk.log 2>&1
+          timeout 240 "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platform-tools' 'emulator' 'system-images;android-35;google_apis;x86_64' > device-out/sdk.log 2>&1
           echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd -n pocket-native -k 'system-images;android-35;google_apis;x86_64' --device pixel_2
+          "$ANDROID_HOME/emulator/emulator" -accel-check > device-out/acceleration.log 2>&1
           "$ANDROID_HOME/emulator/emulator" -avd pocket-native -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 2048 -cores 2 > device-out/emulator.log 2>&1 &
           echo $! > device-out/emulator.pid
-          timeout 360 bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = 1 ]; do sleep 3; done'
+          set +e
+          timeout 240 bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = 1 ]; do sleep 3; done'
+          boot_status=$?
+          set -e
+          if [ "$boot_status" != 0 ]; then tail -100 device-out/emulator.log; exit "$boot_status"; fi
           adb shell input keyevent 82
           adb shell settings put global window_animation_scale 0
           adb shell settings put global transition_animation_scale 0
@@ -57,13 +62,13 @@ jobs:
       - name: Preserve captures before process-restart data reset
         run: |
           mkdir -p device-out/screens
-          adb pull /sdcard/Android/data/dev.joseph.countersteppocket/files/device-evidence/ device-out/screens/
+          timeout 15 adb pull /sdcard/Android/data/dev.joseph.countersteppocket/files/device-evidence/ device-out/screens/
       - name: Verify persistence across an actual process stop
         run: |
           python3 - <<'PY'
           import subprocess,time,xml.etree.ElementTree as ET,re,json
           from pathlib import Path
-          def adb(*args):return subprocess.check_output(['adb',*args],text=True)
+          def adb(*args):return subprocess.check_output(['adb',*args],text=True,timeout=20)
           pkg='dev.joseph.countersteppocket'
           adb('shell','pm','clear',pkg)
           adb('shell','am','start','-W','-n',pkg+'/.MainActivity')
@@ -87,7 +92,7 @@ jobs:
           assert any(n.attrib.get('text')=='No response yet.' for n in after.iter('node'))
           Path('device-out/process-restart.json').write_text(json.dumps({'status':'passed','old_process':oldpid,'new_process':newpid,'draft_preserved':'2x+','no_attempt_invented':True},indent=2))
           Path('device-out/restarted-ui.xml').write_bytes(ET.tostring(after))
-          Path('device-out/restarted-screen.png').write_bytes(subprocess.check_output(['adb','exec-out','screencap','-p']))
+          Path('device-out/restarted-screen.png').write_bytes(subprocess.check_output(['adb','exec-out','screencap','-p'],timeout=20))
           PY
       - name: Package actual outcomes
         run: |
@@ -115,9 +120,10 @@ jobs:
         if: always()
         run: |
           mkdir -p device-out/screens
-          adb pull /sdcard/Android/data/dev.joseph.countersteppocket/files/device-evidence/ device-out/screens/ || true
-          adb logcat -d -s AndroidRuntime > device-out/crash-log.txt || true
-          adb emu kill || true
+          timeout 12 adb pull /sdcard/Android/data/dev.joseph.countersteppocket/files/device-evidence/ device-out/screens/ || true
+          timeout 12 adb logcat -d -s AndroidRuntime > device-out/crash-log.txt || true
+          timeout 8 adb emu kill || true
+          if [ -f device-out/emulator.pid ]; then kill "$(cat device-out/emulator.pid)" 2>/dev/null || true; fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
