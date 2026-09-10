@@ -24,6 +24,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
+      - name: Expose Android SDK tools
+        run: |
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/emulator" >> "$GITHUB_PATH"
       - name: Build actual application and instrumentation APKs
         run: |
           set -o pipefail
@@ -35,7 +39,7 @@ jobs:
           set -euo pipefail
           test -c /dev/kvm
           sudo chmod 666 /dev/kvm
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'system-images;android-35;google_apis;x86_64' > device-out/sdk.log 2>&1
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platform-tools' 'emulator' 'system-images;android-35;google_apis;x86_64' > device-out/sdk.log 2>&1
           echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd -n pocket-native -k 'system-images;android-35;google_apis;x86_64' --device pixel_2
           "$ANDROID_HOME/emulator/emulator" -avd pocket-native -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect -memory 2048 -cores 2 > device-out/emulator.log 2>&1 &
           echo $! > device-out/emulator.pid
@@ -50,6 +54,10 @@ jobs:
           set -o pipefail
           cd pocket
           gradle --no-daemon :app:connectedDebugAndroidTest 2>&1 | tee ../device-out/instrumentation.log
+      - name: Preserve captures before process-restart data reset
+        run: |
+          mkdir -p device-out/screens
+          adb pull /sdcard/Android/data/dev.joseph.countersteppocket/files/device-evidence/ device-out/screens/
       - name: Verify persistence across an actual process stop
         run: |
           python3 - <<'PY'
