@@ -40,7 +40,7 @@ if __name__=='__main__':
     adb('shell','am','start','-W','-n',PKG+'/.MainActivity');time.sleep(1)
     adb('shell','wm','dismiss-keyguard')
     (O/'before-tests.png').write_bytes(subprocess.check_output(['adb','exec-out','screencap','-p'],timeout=20))
-    report={'status':'running','runner':'adb shell am instrument -w -r / AndroidJUnitRunner','scope':'The unchanged 25 native instrumentation test methods; no provider credentials or transaction.'}
+    report={'status':'running','runner':'adb shell am instrument -w -r / AndroidJUnitRunner','scope':'19 retained practice tests and six new store-readiness tests; no provider credentials or transaction.'}
     try:
         result=subprocess.run(['adb','shell','am','instrument','-w','-r','-e','class',PKG+'.DeviceWorkflowTest,'+PKG+'.StoreReadinessTest',PKG+'.test/androidx.test.runner.AndroidJUnitRunner'],text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=480)
         raw=result.stdout;(O/'instrumentation-raw.log').write_text(raw);print(raw,flush=True)

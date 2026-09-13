@@ -118,13 +118,15 @@ class MainActivity: Activity() {
   actions.addView(button("Start another free task") { newTask(false) }.apply{layoutParams=LinearLayout.LayoutParams(0,d(50),1f)})
   root.addView(actions)
   root.addView(button("Mixed-sign practice pack") { ensureStore { refreshAccess(true) } })
-  root.addView(button("Share my practice note"){
+  val noteActions=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL}
+  noteActions.addView(button("Share my practice note"){
    persist();val body="Counterstep Pocket personal practice\nTask: ${practice.task.expression}\nDraft: ${practice.draft}\n${practice.history()}\nHints requested: ${practice.hints}\nPersonal self-reported practice, not an authenticated grade."
    startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {type="text/plain";putExtra(Intent.EXTRA_TEXT,body)},"Share practice note"))
-  })
+  }.apply{textSize=14f;layoutParams=LinearLayout.LayoutParams(0,d(64),1f).apply{setMargins(0,0,d(4),0)}})
+  noteActions.addView(button("Test Store checks and setup"){showStoreChecks()}.apply{textSize=14f;layoutParams=LinearLayout.LayoutParams(0,d(64),1f)})
+  root.addView(noteActions)
   billingStatus=text(if(billing.active)"Recent test access is available; each new pack task is checked again." else "Optional test access has not been checked.",13f,muted)
   root.addView(billingStatus)
-  root.addView(button("Test Store checks and setup"){showStoreChecks()})
   val note=box();note.addView(text("THE WORK RECORD",12f,accent,true))
   note.addView(text("Personal practice only. Local records can be edited; they are not authenticated grades or proof of mastery.",12f,muted))
   root.addView(note)

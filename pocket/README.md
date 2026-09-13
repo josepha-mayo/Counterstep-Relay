@@ -1,28 +1,43 @@
-# Counterstep Pocket 0.3 preview
+# Counterstep Pocket 0.4 preview
 
-A separate native Android repair-to-practice app. It does not replace the Amazon Counterstep Relay or Prom entry. The integer-linear checker supports a narrow expansion task, not general algebra, OCR or a conversational model.
+Write the expanded expression, inspect feedback on the incorrect term, and retain the first attempt, hints and later repair. Free practice, hints, saving and sharing stay free and work without connecting a store. This is a separate native Android prototype; it does not replace the Amazon Relay or Prom browser entry.
 
 ## This revision
 
-Term-specific feedback distinguishes an incorrect coefficient from an incorrect constant. Changing a draft immediately invalidates the displayed result while retaining every previous attempt and hint. An older solved attempt cannot discard an unfinished edited draft. Keyboard focus is released on check/hint and feedback is revealed without hiding later controls.
+The optional **Test Store checks and setup** panel explains the required `mixed_signs` entitlement, package and current offering. It provides separate current-access and offering checks, a sanitized diagnostic export, and removal of a remembered public Test Store key. It remains a developer test interface, not a paid production offer.
 
-The optional RevenueCat Test Store path uses process-local connection, refreshed access before a pack task, independent restoration, named package selection, local expiry/timeouts and stale-callback rejection. Local waiting-state cancellation does not cancel provider transactions. Free practice and hints require no store. No key is included, no SDK purchase result is invented, and release builds disable this test-only setup. Never publish a Test Store-configured APK to an app store.
+Store setup is explicit. Remembering its public `test_` SDK key on this device is unchecked by default; opting in permits reconnecting after a process restart. No private key is accepted or bundled. Forgetting the saved key does not erase RevenueCat history, cancel existing requests, or destroy the in-memory SDK connection. Core practice never depends on a store being configured.
 
-## Build and inspect
+The bounded diagnostic contains only enum events and relative time, not keys, customer/transaction IDs, raw provider error strings or typed practice. Sharing opens Android's chooser, not an automatic send. It is an editable local observation, not a signed receipt or evidence of payment. A Test Store current-access/restore response is not proof of Google Play or cross-account restore.
+
+The original checker, coaching, draft and billing-gate code and all 98 JVM / 19 Android baseline test methods remain intact. Ten JVM diagnostic tests and six native setup/export tests are added. The new test/check entry shares a compact secondary-action row with practice-note sharing, preserving large touch targets.
+
+## Build and run the native checks
 
 JDK 17, Android SDK 35 and Gradle 8.13. From `pocket/`:
 
-```
+```sh
 gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug :app:assembleDebugAndroidTest
 gradle --no-daemon :app:connectedDebugAndroidTest
 ```
 
-The existing isolated device workflow records real Gradle results, Android 15 emulator tests, screenshots and process-stop/reopen evidence. Treat its artifact verification.json as the execution record, not this README. Tests include 28 retained checker tests, 50 billing/key/work-state scenarios and 12 coaching checks. Actual RevenueCat Test Store purchase/cancel/failure/restore/expiry remains a separate uncompleted gate until connected to an owned Test Store project. Share tests intercept the Android chooser and do not send anything.
+The isolated workflow is `.github/workflows/pocket-store-check.yml` on `release/pocket-store-20260913`. It compiles the actual app, runs the 108 JVM and 25 Android test methods, checks process-stop/reopen draft persistence, and captures real emulator pixels at 1179 x 2556. Read that exact run's `verification.json` for results; a planned count is not a passing result. No key, real SDK purchase response or customer is fabricated by these tests.
 
-The debug preview is for testing, not Play Store release. A previous debug APK signed by another runner may not accept an in-place update. Do not delete user data without first preserving any practice notes.
+The initial 0.4 run, 34761132710 at d67b07780b163317eb9af5cf47ff7bbe91f618b6, compiled and passed all 108 JVM tests. It passed the 19 retained native tests and two new tests, but four new tests could not reach the lower setup button. Its failed evidence remains preserved. The following layout correction compacts the secondary controls and reruns the same assertions. It must not be called a verified correction until the later run actually passes.
 
-## Competition status
+## Complete the owned Test Store check
 
-RevenueCat registration and a separate Pocket draft exist; final submission and Next Gen academic-email verification remain separate. No unaided-authorship, validated learning benefit, real revenue or contest acceptance is claimed. Original work by Joseph Ayanda, with substantial AI assistance, MIT licensed.
+See [the setup and evidence instructions](docs/STORE-CHECKS.md). An actual owned public key and configured product/offering are still required. The app uses RevenueCat Android SDK 9.9.0. The source/APK includes no key. SDK-backed test purchase, cancellation/failure and entitlement refresh/restart remain separate from the no-account automated tests.
 
-SDK documentation: https://www.revenuecat.com/docs/test-and-launch/sandbox/test-store
+The debug preview is for testing, not Google Play release. A previous debug APK signed by another runner may reject an in-place update. Preserve practice notes before any uninstall; do not erase user data automatically.
+
+## Competition state and provenance
+
+The RevenueCat project draft exists, but final submission, student verification, an actual Test Store demonstration and required final assets remain separate tasks. No production transaction, app-store release, physical-phone test, learning gain or award is claimed.
+
+Original work by Joseph Ayanda, with substantial AI development assistance, under the MIT license. Native views and a narrow integer-linear checker, not OCR or a conversational model. Other submitted projects and production branches are unchanged.
+
+Official SDK references:
+- https://www.revenuecat.com/docs/test-and-launch/sandbox/test-store
+- https://www.revenuecat.com/docs/customers/identifying-customers
+- https://www.revenuecat.com/docs/getting-started/restoring-purchases
