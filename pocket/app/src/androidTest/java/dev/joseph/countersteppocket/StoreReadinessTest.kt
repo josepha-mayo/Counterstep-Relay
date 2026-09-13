@@ -6,6 +6,9 @@ import android.content.Intent
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.ScrollView
+import android.graphics.Bitmap
+import java.io.File
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -29,8 +32,38 @@ class StoreReadinessTest {
   Assert.assertTrue(context.getSharedPreferences("test_store_setup",Context.MODE_PRIVATE).edit().clear().commit())
   scenario=ActivityScenario.launch(MainActivity::class.java)
  }
- @After fun close(){scenario.close()}
- private fun tap(s:String)=onView(allOf(withText(s),isAssignableFrom(Button::class.java))).perform(scrollTo(),click())
+ @Rule @JvmField val testName=org.junit.rules.TestName()
+ @After fun close(){try{shot("after-store-"+testName.methodName)}finally{scenario.close()}}
+ // Exercise actual swipes rather than requestRectangleOnScreen: the original
+ // scrollTo action did not bring the lower setup row into its visible rectangle.
+ // Do not click until the same real view is at least 90 percent visible.
+ private fun tap(s:String){
+  val target=allOf(withText(s),isAssignableFrom(Button::class.java))
+  try{
+   for(attempt in 0..8){
+    var visible=false
+    onView(target).check {view,error ->
+     if(error!=null)throw error
+     visible=isDisplayingAtLeast(90).matches(view)
+    }
+    if(visible){onView(target).check(matches(isEnabled())).perform(click());return}
+    if(attempt<8)onView(allOf(isAssignableFrom(ScrollView::class.java),isDisplayed())).perform(swipeUp())
+   }
+   onView(target).check(matches(isDisplayingAtLeast(90)))
+   Assert.fail("The target remained outside the visible screen after eight real swipes: "+s)
+  }catch(error:Throwable){runCatching{shot("failed-store-"+testName.methodName)};throw error}
+ }
+ private fun shot(name:String){
+  val instrumentation=InstrumentationRegistry.getInstrumentation()
+  instrumentation.waitForIdleSync()
+  val file=File(context.getExternalFilesDir(null),"device-evidence/$name.png");file.parentFile!!.mkdirs()
+  val bitmap=instrumentation.uiAutomation.takeScreenshot();Assert.assertNotNull(bitmap)
+  file.outputStream().use {Assert.assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,it))};bitmap.recycle()
+  require(Regex("[A-Za-z0-9-]+").matches(name))
+  val destination="/sdcard/Download/pocket-device-evidence"
+  fun shell(command:String){android.os.ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand(command)).use{it.readBytes()}}
+  shell("mkdir -p $destination");shell("cp ${file.absolutePath} $destination/$name.png")
+ }
  @Test fun noConnectionIsDistinguishedFromVerifiedPurchase(){
   tap("Test Store checks and setup")
   onView(withText("No Test Store connected. Free practice works without it.")).check(matches(isDisplayed()))
