@@ -118,10 +118,10 @@ class MainActivity: Activity() {
   actions.addView(button("Start another free task") { newTask(false) }.apply{layoutParams=LinearLayout.LayoutParams(0,d(50),1f)})
   root.addView(actions)
   root.addView(button("Mixed-sign practice pack") { ensureStore { refreshAccess(true) } })
-  val noteActions=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL}
+  val noteActions=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;isBaselineAligned=false}
   noteActions.addView(button("Share my practice note"){
    persist();val body="Counterstep Pocket personal practice\nTask: ${practice.task.expression}\nDraft: ${practice.draft}\n${practice.history()}\nHints requested: ${practice.hints}\nPersonal self-reported practice, not an authenticated grade."
-   startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {type="text/plain";putExtra(Intent.EXTRA_TEXT,body)},"Share practice note"))
+   startActivity(Intent.createChooser(Intent(Intent(Intent.ACTION_SEND).apply {type="text/plain";putExtra(Intent.EXTRA_TEXT,body)}),"Share practice note"))
   }.apply{textSize=14f;layoutParams=LinearLayout.LayoutParams(0,d(64),1f).apply{setMargins(0,0,d(4),0)}})
   noteActions.addView(button("Test Store checks and setup"){showStoreChecks()}.apply{textSize=14f;layoutParams=LinearLayout.LayoutParams(0,d(64),1f)})
   root.addView(noteActions)
