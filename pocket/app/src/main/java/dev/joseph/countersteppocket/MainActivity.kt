@@ -43,6 +43,8 @@ class MainActivity: Activity() {
  private val prefs get()=getSharedPreferences("practice",MODE_PRIVATE)
  override fun onCreate(state:Bundle?) {
   super.onCreate(state)
+  TestStoreConnection.diagnostics.record(StoreDiagnostics.Operation.SESSION,StoreDiagnostics.Outcome.OPENED)
+  TestStoreConnection.reconnectRemembered(applicationContext)
   restore();render()
  }
  override fun onStart() {
@@ -122,6 +124,7 @@ class MainActivity: Activity() {
   })
   billingStatus=text(if(billing.active)"Recent test access is available; each new pack task is checked again." else "Optional test access has not been checked.",13f,muted)
   root.addView(billingStatus)
+  root.addView(button("Test Store checks and setup"){showStoreChecks()})
   val note=box();note.addView(text("THE WORK RECORD",12f,accent,true))
   note.addView(text("Personal practice only. Local records can be edited; they are not authenticated grades or proof of mastery.",12f,muted))
   root.addView(note)
@@ -173,8 +176,9 @@ class MainActivity: Activity() {
   val ticket=billing.begin(kind)
   if(ticket==null){status("A store check is already running, or this screen is inactive.");return null}
   clearTimeout()
+  storeEvent(kind,StoreDiagnostics.Outcome.STARTED)
   requestTimeout=Runnable {
-   if(billing.expireOutstanding(ticket))status("The request timed out locally. Nothing was retried; free practice is unchanged.")
+   if(billing.expireOutstanding(ticket)){storeEvent(ticket.kind,StoreDiagnostics.Outcome.TIMEOUT);status("The request timed out locally. Nothing was retried; free practice is unchanged.")}
   }.also{uiHandler.postDelayed(it,30_050)}
   return ticket
  }
@@ -184,20 +188,24 @@ class MainActivity: Activity() {
   if(TestStoreConnection.configured){action();return}
   if(storeDialog?.isShowing==true)return
   val field=EditText(this).apply{hint="Your public Test Store SDK key (test_...)";setSingleLine(true);filters=arrayOf(InputFilter.LengthFilter(205))}
+  val remember=CheckBox(this).apply{text="Remember this public test key on this device";isChecked=false}
+  val fields=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(d(20),0,d(20),0);addView(field);addView(remember)}
   storeDialog=AlertDialog.Builder(this).setTitle("Connect a Test Store")
-   .setMessage("Optional developer setup. Connecting sends SDK/device and anonymous purchase data to RevenueCat, not typed practice. Use only a public test_ SDK key. The key stays in memory until this process closes. Test Store makes no real charge.")
-   .setView(field).setNegativeButton("Keep free practice",null).setPositiveButton("Connect"){_,_->
+   .setMessage("Optional developer setup. Connecting sends SDK/device and anonymous purchase data to RevenueCat, not typed practice. Use only a public test_ SDK key. By default the public key stays in memory only. Remembering it allows reconnection after a restart. No secret keys. Test Store makes no real charge.")
+   .setView(fields).setNegativeButton("Keep free practice",null).setPositiveButton("Connect"){_,_->
     if(!canUseUi())return@setPositiveButton
     val key=field.text.toString().trim()
     if(!TestStoreKey.accepts(key)){message("A valid public test_ SDK key is required. Nothing was connected.");return@setPositiveButton}
-    try {TestStoreConnection.connect(applicationContext,key);action()}
-    catch(_:Exception){message("The Test Store could not be connected. Use a public test_ key, not a secret key. Your draft is unchanged.")}
+    try {TestStoreConnection.connect(applicationContext,key,remember.isChecked);action()}
+    catch(_:Exception){message("Store setup did not finish. Check Test Store setup before retrying. Your draft is unchanged.")}
    }.create()
   storeDialog?.show()
  }
  private fun finishAccess(ticket:BillingGate.Ticket,info:CustomerInfo):Boolean {
   val e=info.entitlements.active["mixed_signs"]
-  return billing.finishAccess(ticket,e?.isActive==true,e?.expirationDate?.time)
+  val accepted=billing.finishAccess(ticket,e?.isActive==true,e?.expirationDate?.time)
+  storeEvent(ticket.kind,if(!accepted)StoreDiagnostics.Outcome.STALE_IGNORED else if(billing.active)StoreDiagnostics.Outcome.ACTIVE_RESPONSE else StoreDiagnostics.Outcome.INACTIVE_RESPONSE)
+  return accepted
  }
  private fun refreshAccess(openAfter:Boolean){
   if(!TestStoreConnection.configured)return
@@ -206,7 +214,7 @@ class MainActivity: Activity() {
   status("Checking current Test Store access...")
   try {
    Purchases.sharedInstance.getCustomerInfoWith(CacheFetchPolicy.FETCH_CURRENT,onError={
-    runOnUiThread{if(billing.fail(ticket)){clearTimeout();status("Access could not be checked. Core practice is still free.")}}
+    runOnUiThread{if(recordStoreFailure(ticket)){clearTimeout();status("Access could not be checked. Core practice is still free.")}}
    }) { info -> runOnUiThread {
     if(finishAccess(ticket,info)){
      clearTimeout();status(if(billing.active)"Test access checked. It will be checked again before a new pack task." else "No active mixed_signs test access was returned.")
@@ -216,7 +224,7 @@ class MainActivity: Activity() {
      }
     }
    }}
-  } catch(_:Exception){if(billing.fail(ticket)){clearTimeout();status("The access request could not start. Nothing was retried.")}}
+  } catch(_:Exception){if(recordStoreFailure(ticket)){clearTimeout();status("The access request could not start. Nothing was retried.")}}
  }
  private fun restoreTestAccess(){
   // Restore does not depend on a current offering or on loading product prices.
@@ -224,26 +232,27 @@ class MainActivity: Activity() {
   status("Restoring Test Store access...")
   try {
    Purchases.sharedInstance.restorePurchasesWith(onError={
-    runOnUiThread{if(billing.fail(ticket)){clearTimeout();status("Restore failed. Your practice and draft are unchanged.")}}
+    runOnUiThread{if(recordStoreFailure(ticket)){clearTimeout();status("Restore failed. Your practice and draft are unchanged.")}}
    }) { info -> runOnUiThread{
     if(finishAccess(ticket,info)){
-     clearTimeout();status(if(billing.active)"Test access restored. Open the mixed-sign pack to continue." else "Restore returned no active mixed_signs test access.")
+     clearTimeout();status(if(billing.active)"Current test access returned. Open the pack to continue; this is not a Google Play restore test." else "No current mixed_signs test access. Test Store does not establish cross-account Play restore.")
     }
    }}
-  } catch(_:Exception){if(billing.fail(ticket)){clearTimeout();status("Restore could not start. Nothing was retried.")}}
+  } catch(_:Exception){if(recordStoreFailure(ticket)){clearTimeout();status("Restore could not start. Nothing was retried.")}}
  }
  private fun showStore(){
   val ticket=begin(BillingGate.Kind.OFFERINGS)?:return
   status("Loading the Test Store pack...")
   try {
    Purchases.sharedInstance.getOfferingsWith(onError={
-    runOnUiThread{if(billing.fail(ticket)){clearTimeout();status("The offering is unavailable. Restore remains available separately.")}}
+    runOnUiThread{if(recordStoreFailure(ticket)){clearTimeout();status("The offering is unavailable. Restore remains available separately.")}}
    }) { offerings -> runOnUiThread{
     if(billing.finishOfferings(ticket)){
      clearTimeout()
      val pack=offerings.current?.availablePackages?.singleOrNull{it.identifier=="mixed_signs"}
-     if(pack==null){status("Configure exactly one package named mixed_signs in the current offering. Restore does not require an offering.")}
+     if(pack==null){storeEvent(ticket.kind,StoreDiagnostics.Outcome.OFFERING_MISSING);status("Configure exactly one package named mixed_signs in the current offering. Restore does not require an offering.")}
      else if(canUseUi()){
+      storeEvent(ticket.kind,StoreDiagnostics.Outcome.OFFERING_AVAILABLE)
       storeDialog?.dismiss()
       storeDialog=AlertDialog.Builder(this).setTitle("Mixed-sign practice / TEST STORE")
        .setMessage("${pack.product.title}\n${pack.product.price.formatted}\nTest purchase only; no real payment. Free practice, hints and saving remain free.")
@@ -253,19 +262,52 @@ class MainActivity: Activity() {
      }
     }
    }}
-  }catch(_:Exception){if(billing.fail(ticket)){clearTimeout();status("The offering request could not start. Nothing was retried.")}}
+  }catch(_:Exception){if(recordStoreFailure(ticket)){clearTimeout();status("The offering request could not start. Nothing was retried.")}}
  }
  private fun purchaseTestPack(pack:com.revenuecat.purchases.Package){
   val ticket=begin(BillingGate.Kind.PURCHASE)?:return
   status("Waiting for the Test Store result...")
   try {
    Purchases.sharedInstance.purchaseWith(PurchaseParams.Builder(this,pack).build(),onError={_,cancelled->
-    runOnUiThread{if(billing.fail(ticket)){clearTimeout();status(if(cancelled)"Test purchase cancelled. Your draft is unchanged." else "Purchase failed. No access was granted by this app.")}}
+    runOnUiThread{if(recordStoreFailure(ticket,cancelled)){clearTimeout();status(if(cancelled)"Test purchase cancelled. Your draft is unchanged." else "Purchase failed. No access was granted by this app.")}}
    }) { _,info -> runOnUiThread{
     if(finishAccess(ticket,info)){
      clearTimeout();status(if(billing.active)"The SDK returned active test access. Open the pack when ready." else "No active mixed_signs entitlement was returned. Core practice stays free.")
     }
    }}
-  }catch(_:Exception){if(billing.fail(ticket)){clearTimeout();status("The test purchase could not start. Nothing was retried.")}}
+  }catch(_:Exception){if(recordStoreFailure(ticket)){clearTimeout();status("The test purchase could not start. Nothing was retried.")}}
+ }
+
+ private fun storeEvent(kind:BillingGate.Kind,outcome:StoreDiagnostics.Outcome){
+  TestStoreConnection.diagnostics.record(StoreDiagnostics.Operation.valueOf(kind.name),outcome)
+ }
+ private fun recordStoreFailure(ticket:BillingGate.Ticket,cancelled:Boolean=false):Boolean {
+  val accepted=billing.fail(ticket)
+  storeEvent(ticket.kind,if(!accepted)StoreDiagnostics.Outcome.STALE_IGNORED else if(cancelled)StoreDiagnostics.Outcome.CANCELLED else StoreDiagnostics.Outcome.ERROR)
+  return accepted
+ }
+ private fun shareStoreDiagnostic(){
+  val body=TestStoreConnection.diagnostics.report()
+  startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply{type="text/plain";putExtra(Intent.EXTRA_TEXT,body)},"Share local store diagnostic"))
+ }
+ private fun showStoreChecks(){
+  if(!canUseUi())return
+  dismissKeyboard()
+  val panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(d(20),d(12),d(20),d(12))}
+  fun line(s:String){panel.addView(TextView(this).apply{text=s;textSize=15f;setPadding(0,d(5),0,d(8))})}
+  line(if(TestStoreConnection.configured)"SDK configured for this process. That alone is not a verified purchase." else "No Test Store connected. Free practice works without it.")
+  line("Setup: public test_ SDK key; entitlement mixed_signs; current offering with exactly one package named mixed_signs and an attached Test Store product.")
+  line("Test purchase outcomes update SDK CustomerInfo. Restore here is not validation of Google Play or cross-account purchase recovery.")
+  line(if(TestStoreConnection.hasRememberedKey(this))"Public key remembered on this device. App restart may reconnect to RevenueCat." else "No public key remembered. Closing the process removes the in-memory setup.")
+  val dialog=AlertDialog.Builder(this).setTitle("Test Store checks").setView(ScrollView(this).apply{addView(panel)}).setNegativeButton("Close",null).create()
+  fun action(label:String,block:()->Unit){panel.addView(Button(this).apply{text=label;isAllCaps=false;minHeight=d(48);setOnClickListener{dialog.dismiss();block()}})}
+  action("Check current access"){ensureStore{refreshAccess(false)}}
+  action("Check the offering"){ensureStore{showStore()}}
+  action("Share store diagnostic"){shareStoreDiagnostic()}
+  action("Forget remembered key"){
+   val forgotten=TestStoreConnection.forgetRememberedKey(this)
+   message(if(forgotten)"Remembered key removed. This process may remain connected until you close the app. Existing SDK requests are not cancelled; purchase history is not erased." else "The saved setup could not be removed.")
+  }
+  storeDialog=dialog;dialog.show()
  }
 }
