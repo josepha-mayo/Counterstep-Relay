@@ -1,0 +1,77 @@
+name: Pocket pinned preview delivery
+on:
+  push:
+    branches: [release/pocket-delivery-20260915]
+    paths: [.github/workflows/pocket-pinned-delivery.yml]
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: pocket-preview-adfa48a-delivery
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/release/pocket-delivery-20260915'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: josepha-mayo/Counterstep-Relay
+      TAG: pocket-v0.3-preview-adfa48a
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Verify reviewed preparation script
+        run: echo '2337df3414076338f7fee2869bcc5c5d68d939bb4dd1e30016c15e31380cf813  pocket-delivery/prepare.py' | sha256sum --check --strict
+      - name: Download only the pinned existing artifact
+        run: |
+          gh api repos/josepha-mayo/Counterstep-Relay/actions/artifacts/10159811385/zip > /tmp/pocket-original.zip
+          python3 pocket-delivery/prepare.py /tmp/pocket-original.zip /tmp/pocket-assets /tmp/pocket-release-notes.md
+      - name: Publish one non-latest prerelease, never replace assets
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo 'Release already exists; refusing to overwrite.'
+            exit 1
+          fi
+          gh release create "$TAG" /tmp/pocket-assets/* \
+            --target adfa48a8cfbe95a326fdef36a0091ab59a88005c \
+            --title 'Counterstep Pocket 0.3 developer preview' \
+            --notes-file /tmp/pocket-release-notes.md --prerelease --latest=false
+      - name: Verify public bytes without authentication or cookies
+        env:
+          GH_TOKEN: ''
+        run: |
+          mkdir -p /tmp/pocket-anonymous
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,time,urllib.request
+          base='https://github.com/josepha-mayo/Counterstep-Relay/releases/download/pocket-v0.3-preview-adfa48a/'
+          results=[]
+          for local in sorted(Path('/tmp/pocket-assets').iterdir()):
+              for attempt in range(3):
+                  try:
+                      with urllib.request.urlopen(base+local.name,timeout=40) as r:
+                          data=r.read(10_000_001)
+                      break
+                  except Exception:
+                      if attempt==2: raise
+                      time.sleep(5)
+              expected=hashlib.sha256(local.read_bytes()).hexdigest()
+              actual=hashlib.sha256(data).hexdigest()
+              assert actual==expected,(local.name,actual,expected)
+              results.append({'file':local.name,'bytes':len(data),'sha256':actual,'authenticated':False})
+          Path('/tmp/pocket-anonymous/verification.json').write_text(json.dumps({'status':'passed','app_rebuilt':False,'public_downloads':results},indent=2))
+          print(json.dumps({'status':'passed','anonymous_downloads':len(results),'app_rebuilt':False}))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pocket-delivery-verification
+          path: |
+            /tmp/pocket-anonymous/
+            /tmp/pocket-assets/VERIFICATION.json
+            /tmp/pocket-assets/SHA256SUMS.txt
+          if-no-files-found: warn
+          retention-days: 30
